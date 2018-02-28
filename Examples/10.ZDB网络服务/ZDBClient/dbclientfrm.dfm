@@ -42,7 +42,7 @@ object Form1: TForm1
       OnClick = build100DataButtonClick
     end
     object QueryG300Button: TButton
-      Left = 255
+      Left = 256
       Top = 17
       Width = 178
       Height = 64
@@ -122,15 +122,12 @@ object Form1: TForm1
     ActivePage = TabSheet1
     Align = alClient
     TabOrder = 2
-    ExplicitTop = 201
-    ExplicitWidth = 835
-    ExplicitHeight = 574
     object TabSheet1: TTabSheet
       Caption = #29366#24577
       ExplicitLeft = 0
       ExplicitTop = 0
-      ExplicitWidth = 281
-      ExplicitHeight = 165
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object Memo: TMemo
         Left = 0
         Top = 0

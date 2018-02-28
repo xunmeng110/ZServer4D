@@ -1,8 +1,11 @@
-{******************************************************************************}
-{* ObjectDB Stream support,                                                   *}
-{* https://github.com/PassByYou888/CoreCipher                                 *}
-(* https://github.com/PassByYou888/ZServer4D                                  *)
-{******************************************************************************}
+{ ****************************************************************************** }
+{ * ObjectDB Stream support,                                                   * }
+{ * https://github.com/PassByYou888/CoreCipher                                 * }
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
+{ ****************************************************************************** }
 (*
   update history
 *)
@@ -13,7 +16,8 @@ unit ItemStream;
 
 interface
 
-uses SysUtils, CoreClasses, Classes, UnicodeMixedLib, ObjectData, ObjectDataManager;
+uses SysUtils, CoreClasses, Classes, UnicodeMixedLib, ObjectData, ObjectDataManager,
+  PascalStrings;
 
 type
   TItemStream = class(TCoreClassStream)
@@ -23,11 +27,15 @@ type
   protected
     function GetSize: Int64; override;
   public
-    constructor Create(DBEngine: TObjectDataManager; DBPath, DBItem: string); overload;
+    constructor Create(DBEngine: TObjectDataManager; DBPath, DBItem: SystemString); overload;
     constructor Create(DBEngine: TObjectDataManager; var ItemHnd: TItemHandle); overload;
     constructor Create; overload;
     destructor Destroy; override;
     procedure ChangeHandle(DBEngine: TObjectDataManager; var ItemHnd: TItemHandle);
+
+    procedure SaveToFile(fn: SystemString);
+    procedure LoadFromFile(fn: SystemString);
+
     function Read(var Buffer; Count: Longint): Longint; override;
     function Write(const Buffer; Count: Longint): Longint; override;
     function Seek(Offset: Longint; Origin: Word): Longint; overload; override;
@@ -58,7 +66,7 @@ begin
   Init_TTMDBItemHandle(FItemHnd);
 end;
 
-constructor TItemStream.Create(DBEngine: TObjectDataManager; DBPath, DBItem: string);
+constructor TItemStream.Create(DBEngine: TObjectDataManager; DBPath, DBItem: SystemString);
 var
   ihnd: TItemHandle;
 begin
@@ -83,6 +91,30 @@ begin
   FDBEngine := DBEngine;
   FItemHnd := ItemHnd;
   FDBEngine.ItemSeek(FItemHnd, 0);
+end;
+
+procedure TItemStream.SaveToFile(fn: SystemString);
+var
+  Stream: TCoreClassStream;
+begin
+  Stream := TCoreClassFileStream.Create(fn, fmCreate);
+  try
+      Stream.CopyFrom(Self, size);
+  finally
+      DisposeObject(Stream);
+  end;
+end;
+
+procedure TItemStream.LoadFromFile(fn: SystemString);
+var
+  Stream: TCoreClassStream;
+begin
+  Stream := TCoreClassFileStream.Create(fn, fmOpenRead or fmShareDenyWrite);
+  try
+      CopyFrom(Stream, Stream.size);
+  finally
+      DisposeObject(Stream);
+  end;
 end;
 
 function TItemStream.Read(var Buffer; Count: Longint): Longint;

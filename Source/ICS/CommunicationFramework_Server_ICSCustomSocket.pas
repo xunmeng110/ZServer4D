@@ -1,15 +1,18 @@
-{ ****************************************************************************** }
+﻿{ ****************************************************************************** }
 { * ics support                                                                * }
 { * written by QQ 600585@qq.com                                                * }
 { * https://github.com/PassByYou888/CoreCipher                                 * }
-(* https://github.com/PassByYou888/ZServer4D *)
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
 { ****************************************************************************** }
 (*
   update history
 *)
 unit CommunicationFramework_Server_ICSCustomSocket;
 
-{$I ..\..\zDefine.inc}
+{$I ..\zDefine.inc}
 
 interface
 
@@ -121,6 +124,8 @@ type
 
 function WSAInfo: string;
 
+function WSAIPList: TStrings;
+
 procedure ProcessICSMessages;
 
 implementation
@@ -147,6 +152,11 @@ begin
 
 end;
 
+function WSAIPList: TStrings;
+begin
+  Result := LocalIPList(TSocketFamily.sfAny);
+end;
+
 var
   ICSMessageProcessing: Boolean = False;
 
@@ -155,7 +165,7 @@ var
   msg: TMsg;
 begin
   if ICSMessageProcessing then
-    exit;
+      exit;
 
   ICSMessageProcessing := True;
   try
@@ -338,4 +348,3 @@ begin
 end;
 
 end.
-

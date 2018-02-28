@@ -31,6 +31,7 @@ type
   private const
     SHUTDOWN_FLAG = ULONG_PTR(-1);
     SO_UPDATE_CONNECT_CONTEXT = $7010;
+    IPV6_V6ONLY = 27;
   private type
     TAddrUnion = record
       case Integer of
@@ -187,8 +188,8 @@ begin
   LListenSocket := LListen.Socket;
 
   // 不设置该参数, 会导致 getpeername 调用失败
-  if (TSocketAPI.SetSockOpt(LClientSocket, SOL_SOCKET,
-    SO_UPDATE_ACCEPT_CONTEXT, LListenSocket, SizeOf(THandle)) < 0) then
+  if (TSocketAPI.SetSockOpt<THandle>(LClientSocket, SOL_SOCKET,
+    SO_UPDATE_ACCEPT_CONTEXT, LListenSocket) < 0) then
   begin
     {$IFDEF DEBUG}
     _LogLastOsError;
@@ -219,7 +220,6 @@ procedure TIocpCrossSocket._HandleConnect(APerIoData: PPerIoData);
 var
   LClientSocket: THandle;
   LConnection: ICrossConnection;
-  LOptVal: Integer;
   LSuccess: Boolean;
 
   procedure _Failed1;
@@ -243,9 +243,8 @@ begin
   end;
 
   // 不设置该参数, 会导致 getpeername 调用失败
-  LOptVal := 1;
-  if (TSocketAPI.SetSockOpt(LClientSocket, SOL_SOCKET,
-    SO_UPDATE_CONNECT_CONTEXT, LOptVal, SizeOf(Integer)) < 0) then
+  if (TSocketAPI.SetSockOpt<Integer>(LClientSocket, SOL_SOCKET,
+    SO_UPDATE_CONNECT_CONTEXT, 1) < 0) then
   begin
     _Failed1;
     Exit;
@@ -344,23 +343,9 @@ begin
   for I := 0 to Length(FIoThreads) - 1 do
     PostQueuedCompletionStatus(FIocpHandle, 0, 0, POverlapped(SHUTDOWN_FLAG));
   WaitForMultipleObjects(Length(FIoThreadHandles), Pointer(FIoThreadHandles), True, INFINITE);
-
-  try
-    CloseHandle(FIocpHandle);
-  except
-  end;
-
-  try
-    for I := 0 to Length(FIoThreads) - 1 do
-      begin
-        try
-         FreeAndNil(FIoThreads[I]);
-        except
-        end;
-      end;
-  except
-  end;
-
+  CloseHandle(FIocpHandle);
+  for I := 0 to Length(FIoThreads) - 1 do
+    FreeAndNil(FIoThreads[I]);
   FIoThreads := nil;
   FIoThreadHandles := nil;
 end;
@@ -503,7 +488,6 @@ var
     if Assigned(ACallback) then
       ACallback(LListen, True);
   end;
-
 begin
   LListen := nil;
   FillChar(LHints, SizeOf(TRawAddrInfo), 0);
@@ -515,6 +499,9 @@ begin
   LAddrInfo := TSocketAPI.GetAddrInfo(AHost, APort, LHints);
   if (LAddrInfo = nil) then
   begin
+    {$IFDEF DEBUG}
+    _LogLastOsError;
+    {$ENDIF}
     _Failed;
     Exit;
   end;
@@ -537,9 +524,15 @@ begin
       TSocketAPI.SetNonBlock(LListenSocket, True);
       TSocketAPI.SetReUseAddr(LListenSocket, True);
 
+      if (LAddrInfo.ai_family = AF_INET6) then
+        TSocketAPI.SetSockOpt<Integer>(LListenSocket, IPPROTO_IPV6, IPV6_V6ONLY, 1);
+
       if (TSocketAPI.Bind(LListenSocket, LAddrInfo.ai_addr, LAddrInfo.ai_addrlen) < 0)
         or (TSocketAPI.Listen(LListenSocket) < 0) then
       begin
+        {$IFDEF DEBUG}
+        _LogLastOsError;
+        {$ENDIF}
         _Failed;
         Exit;
       end;
@@ -635,10 +628,16 @@ begin
       // ERROR_CONNECTION_REFUSED, 1225, 远程计算机拒绝网络连接。
       if (LPerIoData.CrossData <> nil) then
       begin
-        LPerIoData.CrossData.Close;
-        if Assigned(LPerIoData.Callback)
-          and (LPerIoData.CrossData is TIocpConnection) then
-          LPerIoData.Callback(LPerIoData.CrossData as ICrossConnection, False);
+        // AcceptEx虽然成功, 但是Socket句柄耗尽了, 再次投递AcceptEx
+        if (LPerIoData.Action = ioAccept) then
+          _NewAccept(LPerIoData.CrossData as ICrossListen)
+        else
+        begin
+          LPerIoData.CrossData.Close;
+          if Assigned(LPerIoData.Callback)
+            and (LPerIoData.CrossData is TIocpConnection) then
+            LPerIoData.Callback(LPerIoData.CrossData as ICrossConnection, False);
+        end;
       end else
       begin
         TSocketAPI.CloseSocket(LPerIoData.Socket);

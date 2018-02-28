@@ -1,14 +1,16 @@
 unit EzServFrm;
-
+
 interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
+  JsonDataObjects,
   CommunicationFramework,
   CommunicationFramework_Server_ICS,
   CommunicationFramework_Server_Indy,
-  CommunicationFramework_Server_CrossSocket, DoStatusIO, CoreClasses,
+  CommunicationFramework_Server_CrossSocket,
+  DoStatusIO, CoreClasses,
   DataFrameEngine, UnicodeMixedLib, MemoryStream64;
 
 type
@@ -39,9 +41,13 @@ type
     procedure cmd_helloWorld_Stream(Sender: TPeerClient; InData: TDataFrameEngine);
     procedure cmd_helloWorld_Stream_Result(Sender: TPeerClient; InData, OutData: TDataFrameEngine);
 
+    procedure cmd_Json_Stream(Sender: TPeerClient; InData: TDataFrameEngine);
+
     procedure cmd_TestMiniStream(Sender: TPeerClient; InData: TDataFrameEngine);
 
     procedure cmd_Test128MBigStream(Sender: TPeerClient; InData: TCoreClassStream; BigStreamTotal, BigStreamCompleteSize: Int64);
+
+    procedure cmd_TestCompleteBuffer(Sender: TPeerIO; InData: PByte; DataSize: NativeInt);
   public
     { Public declarations }
     server: TCommunicationFramework_Server_CrossSocket;
@@ -70,6 +76,19 @@ begin
   OutData.WriteString('result 654321');
 end;
 
+procedure TEZServerForm.cmd_Json_Stream(Sender: TPeerClient; InData: TDataFrameEngine);
+var
+  js: TJsonObject;
+  ns: TStringList;
+begin
+  js := TJsonObject.Create;
+  ns := TStringList.Create;
+  InData.Reader.ReadJson(js);
+  js.SaveToLines(ns);
+  DoStatus(ns);
+  disposeObject(ns);
+end;
+
 procedure TEZServerForm.cmd_TestMiniStream(Sender: TPeerClient; InData: TDataFrameEngine);
 var
   ms: TMemoryStream;
@@ -79,7 +98,7 @@ begin
 
   DoStatus(umlMD5Char(ms.Memory, ms.Size).Text);
 
-  DisposeObject(ms);
+  disposeObject(ms);
 end;
 
 procedure TEZServerForm.cmd_Test128MBigStream(Sender: TPeerClient; InData: TCoreClassStream; BigStreamTotal, BigStreamCompleteSize: Int64);
@@ -98,6 +117,11 @@ begin
     end;
 end;
 
+procedure TEZServerForm.cmd_TestCompleteBuffer(Sender: TPeerIO; InData: PByte; DataSize: NativeInt);
+begin
+  Sender.Print('Complete buffer md5: %s', [umlMD5String(InData, DataSize).Text]);
+end;
+
 procedure TEZServerForm.DoStatusNear(AText: string; const ID: Integer);
 begin
   Memo1.Lines.Add(AText);
@@ -109,17 +133,25 @@ begin
   server := TCommunicationFramework_Server_CrossSocket.Create;
   server.PeerClientUserSpecialClass := TMySpecialDefine;
 
+  // 更改最大completeBuffer，这里只用于测试，正常运行服务器，这里一般给4M就可以了
+  server.MaxCompleteBufferSize := 128 * 1024 * 1024;
+
   server.RegisterDirectConsole('helloWorld_Console').OnExecute := cmd_helloWorld_Console;
   server.RegisterDirectStream('helloWorld_Stream').OnExecute := cmd_helloWorld_Stream;
   server.RegisterStream('helloWorld_Stream_Result').OnExecute := cmd_helloWorld_Stream_Result;
 
+  server.RegisterDirectStream('Json_Stream').OnExecute := cmd_Json_Stream;
+
   server.RegisterDirectStream('TestMiniStream').OnExecute := cmd_TestMiniStream;
   server.RegisterBigStream('Test128MBigStream').OnExecute := cmd_Test128MBigStream;
+
+  // 注册Completebuffer指令
+  server.RegisterCompleteBuffer('TestCompleteBuffer').OnExecute := cmd_TestCompleteBuffer;
 end;
 
 procedure TEZServerForm.FormDestroy(Sender: TObject);
 begin
-  DisposeObject(server);
+  disposeObject(server);
   DeleteDoStatusHook(self);
 end;
 
@@ -147,8 +179,10 @@ end;
 
 destructor TMySpecialDefine.Destroy;
 begin
-  DisposeObject(tempStream);
+  DoStatus('%s disconnect', [Owner.GetPeerIP]);
+  disposeObject(tempStream);
   inherited Destroy;
 end;
 
 end.
+

@@ -1,7 +1,10 @@
 { ****************************************************************************** }
 { * ObjectDBManager                                                            * }
 { * https://github.com/PassByYou888/CoreCipher                                 * }
-(* https://github.com/PassByYou888/ZServer4D *)
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
 { ****************************************************************************** }
 (*
   update history
@@ -13,7 +16,7 @@ unit ObjectDataManager;
 
 interface
 
-uses CoreClasses, ObjectData, UnicodeMixedLib, PascalStrings;
+uses CoreClasses, ObjectData, UnicodeMixedLib, PascalStrings, ListEngine;
 
 type
   TItemHandle          = TTMDBItemHandle;
@@ -40,6 +43,8 @@ type
     function GetAutoFreeHandle: Boolean;
     procedure SetAutoFreeHandle(const Value: Boolean);
   protected
+    procedure DoCreateFinish; virtual;
+
     function GetOverWriteItem: Boolean;
     function GetAllowSameHeaderName: Boolean;
     function GetDBTime: TDateTime;
@@ -62,7 +67,9 @@ type
     function Close: Boolean;
     function ErrorNo: Int64;
     function Modify: Boolean;
-    function Size: Int64;
+    function Size: Int64; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function IORead: Int64; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function IOWrite: Int64; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     procedure SetID(const ID: Byte);
     procedure Update;
 
@@ -92,15 +99,12 @@ type
     function GetPathFieldPos(const dbPath: SystemString): Int64;
     function GetHeaderLastModifyTime(const hPos: Int64): TDateTime;
 
-    function AddFile(const dbPath, DBItem, DBItemDescription, FileName: SystemString): Boolean;
-    function PutToFile(const dbPath, DBItem, FileName: SystemString): Boolean;
     function GetItemSize(const dbPath, DBItem: SystemString): Int64;
 
     // fast lowlevel
-    function GetFirstHeaderFromField(FieldPos: Int64; var h: THeader): Boolean; inline;
-    function GetLastHeaderFromField(FieldPos: Int64; var h: THeader): Boolean; inline;
-    function GetHeader(hPos: Int64; var h: THeader): Boolean; inline;
-
+    function GetFirstHeaderFromField(FieldPos: Int64; var h: THeader): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function GetLastHeaderFromField(FieldPos: Int64; var h: THeader): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function GetHeader(hPos: Int64; var h: THeader): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     function ItemAddFile(var ItemHnd: TItemHandle; const FileName: SystemString): Boolean;
     function ItemAutoConnect(const dbPath, DBItem, DBItemDescription: SystemString; var ItemHnd: TItemHandle): Boolean;
     function ItemFastAutoConnect_F(const FieldPos: Int64; const DBItem, DBItemDescription: SystemString; var ItemHnd: TItemHandle): Boolean;
@@ -119,58 +123,114 @@ type
     function ItemFastFindLast(const FieldPos: Int64; const DBItem: SystemString; var ItemSearchHandle: TItemSearch): Boolean;
     function ItemFastFindNext(var ItemSearchHandle: TItemSearch): Boolean;
     function ItemFastFindPrev(var ItemSearchHandle: TItemSearch): Boolean;
-    function ItemFastOpen(const aPos: Int64; var ItemHnd: TItemHandle): Boolean; inline;
+    function ItemFastOpen(const aPos: Int64; var ItemHnd: TItemHandle): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     function ItemFastResetBody(const aPos: Int64): Boolean;
-    function ItemFindFirst(const dbPath, DBItem: SystemString; var ItemSearchHandle: TItemSearch): Boolean; inline;
-    function ItemFindLast(const dbPath, DBItem: SystemString; var ItemSearchHandle: TItemSearch): Boolean; inline;
-    function ItemFindNext(var ItemSearchHandle: TItemSearch): Boolean; inline;
-    function ItemFindPrev(var ItemSearchHandle: TItemSearch): Boolean; inline;
-    function ItemGetFile(var ItemHnd: TItemHandle; const FileName: SystemString): Boolean;
+    function ItemFindFirst(const dbPath, DBItem: SystemString; var ItemSearchHandle: TItemSearch): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemFindLast(const dbPath, DBItem: SystemString; var ItemSearchHandle: TItemSearch): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemFindNext(var ItemSearchHandle: TItemSearch): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemFindPrev(var ItemSearchHandle: TItemSearch): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     function ItemMove(const dbPath, ItemName, DestPath: SystemString): Boolean;
     function ItemOpen(const dbPath, DBItem: SystemString; var ItemHnd: TItemHandle): Boolean;
 
-    function ItemRead(var ItemHnd: TItemHandle; const aSize: Int64; var Buffers): Boolean; inline;
-    function ItemReadBool(var ItemHnd: TItemHandle; var Value: Boolean): Boolean; inline;
-    function ItemReadInt(var ItemHnd: TItemHandle; var Value: Integer): Boolean; inline;
-    function ItemReadReturnBool(var ItemHnd: TItemHandle; const DefaultValue: Boolean): Boolean; inline;
-    function ItemReadReturnInt(var ItemHnd: TItemHandle; const DefaultValue: Integer): Integer; inline;
-    function ItemReadReturnStr(var ItemHnd: TItemHandle; const DefaultValue: SystemString): SystemString; inline;
-    function ItemReadStr(var ItemHnd: TItemHandle; var Value: SystemString): Boolean; inline;
-    function ItemReadTime(var ItemHnd: TItemHandle; var Value: TDateTime): Boolean; inline;
-
-    function ItemSeekStart(var ItemHnd: TItemHandle): Boolean; inline;
-    function ItemSeekLast(var ItemHnd: TItemHandle): Boolean; inline;
-    function ItemSeek(var ItemHnd: TItemHandle; const ItemOffset: Int64): Boolean; inline;
-    function ItemGetPos(var ItemHnd: TItemHandle): Int64; inline;
-    function ItemGetSize(var ItemHnd: TItemHandle): Int64; inline;
-
-    function ItemWrite(var ItemHnd: TItemHandle; const aSize: Int64; var Buffers): Boolean; inline;
-    function ItemWriteBool(var ItemHnd: TItemHandle; const Value: Boolean): Boolean; inline;
-    function ItemWriteInt(var ItemHnd: TItemHandle; const Value: Integer): Boolean; inline;
-    function ItemWriteStr(var ItemHnd: TItemHandle; const Value: SystemString): Boolean; inline;
-    function ItemWriteTime(var ItemHnd: TItemHandle; const Value: TDateTime): Boolean; inline;
-    function ReadBool(const Section, Item: SystemString; const Value: Boolean): Boolean; inline;
-    function ReadString(const Section, Item, Value: SystemString): SystemString; inline;
-    function WriteBool(const Section, Item: SystemString; const Value: Boolean): Boolean; inline;
-    function WriteString(const Section, Item, Value: SystemString): Boolean; inline;
-
+    function ItemRead(var ItemHnd: TItemHandle; const aSize: Int64; var Buffers): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemSeekStart(var ItemHnd: TItemHandle): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemSeekLast(var ItemHnd: TItemHandle): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemSeek(var ItemHnd: TItemHandle; const ItemOffset: Int64): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemGetPos(var ItemHnd: TItemHandle): Int64; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemGetSize(var ItemHnd: TItemHandle): Int64; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function ItemWrite(var ItemHnd: TItemHandle; const aSize: Int64; var Buffers): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     function RecursionSearchFirst(const InitPath, MaskName: SystemString; var RecursionSearchHnd: TItemRecursionSearch): Boolean;
     function RecursionSearchNext(var RecursionSearchHnd: TItemRecursionSearch): Boolean;
 
-    function ObjectDataHandlePtr: PTMDB; inline;
-
+    function ObjectDataHandlePtr: PTMDB; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     property AutoFreeHandle: Boolean read GetAutoFreeHandle write SetAutoFreeHandle;
     property IsOnlyRead: Boolean read FOnlyRead;
     property NeedCreateNew: Boolean read FNeedCreateNew;
     property ObjectName: SystemString read FObjectName write FObjectName;
     property DefaultItemID: Byte read FDefaultItemID;
     property StreamEngine: TCoreClassStream read FStreamEngine;
-    property Time: TDateTime read GetDBTime;
+    property DBTime: TDateTime read GetDBTime;
 
     property OverWriteItem: Boolean read GetOverWriteItem write SetOverWriteItem;
     property AllowSameHeaderName: Boolean read GetAllowSameHeaderName write SetAllowSameHeaderName;
     // user custom data
     property Data: Pointer read FData write FData;
+  end;
+
+  TObjectDataManagerOfCache = class(TObjectDataManager)
+  private
+    type
+    PObjectDataCacheHeader    = PHeader;
+    PObjectDataCacheItemBlock = PItemBlock;
+
+    PObjectDataCacheItem = ^TObjectDataCacheItem;
+
+    TObjectDataCacheItem = packed record
+      Description: umlString;
+      ExtID: Byte;
+      FirstBlockPOS: Int64;
+      LastBlockPOS: Int64;
+      Size: Int64;
+      BlockCount: Int64;
+      CurrentBlockSeekPOS: Int64;
+      CurrentFileSeekPOS: Int64;
+      DataWrited: Boolean;
+      Return: Integer;
+      MemorySiz: NativeUInt;
+      procedure Write(var wVal: TItem); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+      procedure Read(var rVal: TItem); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    end;
+
+    PObjectDataCacheField = ^TObjectDataCacheField;
+
+    TObjectDataCacheField = packed record
+      UpLevelFieldPOS: Int64;
+      Description: umlString;
+      HeaderCount: Int64;
+      FirstHeaderPOS: Int64;
+      LastHeaderPOS: Int64;
+      Return: Integer;
+      MemorySiz: NativeUInt;
+      procedure Write(var wVal: TField); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+      procedure Read(var rVal: TField); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    end;
+  private
+    FHeaderCache, FItemBlockCache, FItemCache, FFieldCache: TInt64HashPointerList;
+
+    procedure HeaderCache_AddDataProc(p: Pointer);
+    procedure ItemBlockCache_AddDataProc(p: Pointer);
+    procedure ItemCache_AddDataProc(p: Pointer);
+    procedure FieldCache_AddDataProc(p: Pointer);
+
+    procedure HeaderCache_DataFreeProc(p: Pointer);
+    procedure ItemBlockCache_DataFreeProc(p: Pointer);
+    procedure ItemCache_DataFreeProc(p: Pointer);
+    procedure FieldCache_DataFreeProc(p: Pointer);
+
+    procedure HeaderWriteProc(fPos: Int64; var wVal: THeader);
+    procedure HeaderReadProc(fPos: Int64; var rVal: THeader; var Done: Boolean);
+    procedure ItemBlockWriteProc(fPos: Int64; var wVal: TItemBlock);
+    procedure ItemBlockReadProc(fPos: Int64; var rVal: TItemBlock; var Done: Boolean);
+    procedure ItemWriteProc(fPos: Int64; var wVal: TItem);
+    procedure ItemReadProc(fPos: Int64; var rVal: TItem; var Done: Boolean);
+    procedure OnlyItemRecWriteProc(fPos: Int64; var wVal: TItem);
+    procedure OnlyItemRecReadProc(fPos: Int64; var rVal: TItem; var Done: Boolean);
+    procedure FieldWriteProc(fPos: Int64; var wVal: TField);
+    procedure FieldReadProc(fPos: Int64; var rVal: TField; var Done: Boolean);
+    procedure OnlyFieldRecWriteProc(fPos: Int64; var wVal: TField);
+    procedure OnlyFieldRecReadProc(fPos: Int64; var rVal: TField; var Done: Boolean);
+
+    procedure DoCreateFinish; override;
+  public
+    destructor Destroy; override;
+    procedure BuildDBCacheIntf;
+    procedure FreeDBCacheIntf;
+    procedure CleaupCache;
+
+    property HeaderCache: TInt64HashPointerList read FHeaderCache;
+    property ItemBlockCache: TInt64HashPointerList read FItemBlockCache;
+    property ItemCache: TInt64HashPointerList read FItemCache;
+    property FieldCache: TInt64HashPointerList read FFieldCache;
   end;
 
   TObjectDataMarshal = class(TCoreClassObject)
@@ -237,6 +297,10 @@ begin
       FObjectDataHandle.IOHnd.AutoFree := Value;
 end;
 
+procedure TObjectDataManager.DoCreateFinish;
+begin
+end;
+
 function TObjectDataManager.GetOverWriteItem: Boolean;
 begin
   Result := FObjectDataHandle.OverWriteItem;
@@ -268,12 +332,14 @@ constructor TObjectDataManager.Create(const aObjectName: SystemString; const aID
 begin
   inherited Create;
   NewHandle(nil, aObjectName, aID, aOnlyRead, False);
+  DoCreateFinish;
 end;
 
 constructor TObjectDataManager.CreateNew(const aObjectName: SystemString; const aID: Byte);
 begin
   inherited Create;
   NewHandle(nil, aObjectName, aID, False, True);
+  DoCreateFinish;
 end;
 
 constructor TObjectDataManager.CreateAsStream(aStream: TCoreClassStream; const aObjectName: SystemString; const aID: Byte; aOnlyRead, aIsNewData, aAutoFreeHandle: Boolean);
@@ -281,6 +347,7 @@ begin
   inherited Create;
   NewHandle(aStream, aObjectName, aID, aOnlyRead, aIsNewData);
   AutoFreeHandle := aAutoFreeHandle;
+  DoCreateFinish;
 end;
 
 destructor TObjectDataManager.Destroy;
@@ -474,12 +541,22 @@ end;
 
 function TObjectDataManager.Modify: Boolean;
 begin
-  Result := FObjectDataHandle.WriteFlags;
+  Result := FObjectDataHandle.IOHnd.WriteFlag;
 end;
 
 function TObjectDataManager.Size: Int64;
 begin
   Result := FObjectDataHandle.IOHnd.Size;
+end;
+
+function TObjectDataManager.IORead: Int64;
+begin
+  Result := FObjectDataHandle.IOHnd.IORead;
+end;
+
+function TObjectDataManager.IOWrite: Int64;
+begin
+  Result := FObjectDataHandle.IOHnd.IOWrite;
 end;
 
 procedure TObjectDataManager.SetID(const ID: Byte);
@@ -666,56 +743,6 @@ begin
       Result := h.LastModifyTime
   else
       Result := umlDefaultTime;
-end;
-
-function TObjectDataManager.AddFile(const dbPath, DBItem, DBItemDescription, FileName: SystemString): Boolean;
-var
-  DBItemHandle: TItemHandle;
-begin
-  Result := False;
-
-  if ItemExists(dbPath, DBItem) then
-    begin
-      if not ItemOpen(dbPath, DBItem, DBItemHandle) then
-        begin
-          ItemClose(DBItemHandle);
-          Exit;
-        end;
-    end
-  else
-    begin
-      CreateField(dbPath, DBItemDescription);
-      if not ItemCreate(dbPath, DBItem, DBItemDescription, DBItemHandle) then
-        begin
-          ItemClose(DBItemHandle);
-          Exit;
-        end;
-    end;
-
-  if not ItemAddFile(DBItemHandle, FileName) then
-    begin
-      ItemClose(DBItemHandle);
-      Exit;
-    end;
-  Result := True;
-end;
-
-function TObjectDataManager.PutToFile(const dbPath, DBItem, FileName: SystemString): Boolean;
-var
-  DBItemHandle: TItemHandle;
-begin
-  Result := False;
-  if not ItemOpen(dbPath, DBItem, DBItemHandle) then
-    begin
-      ItemClose(DBItemHandle);
-      Exit;
-    end;
-  if not ItemGetFile(DBItemHandle, FileName) then
-    begin
-      ItemClose(DBItemHandle);
-      Exit;
-    end;
-  Result := True;
 end;
 
 function TObjectDataManager.GetItemSize(const dbPath, DBItem: SystemString): Int64;
@@ -1014,76 +1041,6 @@ begin
   Result := dbPack_FindPrevItem(ItemSearchHandle, FDefaultItemID, FObjectDataHandle);
 end;
 
-function TObjectDataManager.ItemGetFile(var ItemHnd: TItemHandle; const FileName: SystemString): Boolean;
-var
-  RepaInt   : Integer;
-  FileHandle: TIOHnd;
-  FileSize  : Int64;
-  Buff      : array [0 .. MaxBuffSize] of umlChar;
-begin
-  Result := False;
-  InitIOHnd(FileHandle);
-  if not umlFileCreate(FileName, FileHandle) then
-    begin
-      umlFileClose(FileHandle);
-      Exit;
-    end;
-
-  if not dbPack_ItemRead(umlSizeLength, FileSize, ItemHnd, FObjectDataHandle) then
-    begin
-      umlFileClose(FileHandle);
-      Exit;
-    end;
-
-  if FileSize > MaxBuffSize then
-    begin
-      for RepaInt := 1 to FileSize div MaxBuffSize do
-        begin
-          if not dbPack_ItemRead(MaxBuffSize, Buff, ItemHnd, FObjectDataHandle) then
-            begin
-              umlFileClose(FileHandle);
-              Exit;
-            end;
-          if not umlFileWrite(FileHandle, MaxBuffSize, Buff) then
-            begin
-              umlFileClose(FileHandle);
-              Exit;
-            end;
-        end;
-      if (FileSize mod MaxBuffSize) > 0 then
-        begin
-          if not dbPack_ItemRead(FileSize mod MaxBuffSize, Buff, ItemHnd, FObjectDataHandle) then
-            begin
-              umlFileClose(FileHandle);
-              Exit;
-            end;
-          if not umlFileWrite(FileHandle, FileSize mod MaxBuffSize, Buff) then
-            begin
-              umlFileClose(FileHandle);
-              Exit;
-            end;
-        end;
-    end
-  else
-    begin
-      if FileSize > 0 then
-        begin
-          if not dbPack_ItemRead(FileSize, Buff, ItemHnd, FObjectDataHandle) then
-            begin
-              umlFileClose(FileHandle);
-              Exit;
-            end;
-          if not umlFileWrite(FileHandle, FileSize, Buff) then
-            begin
-              umlFileClose(FileHandle);
-              Exit;
-            end;
-        end;
-    end;
-  umlFileClose(FileHandle);
-  Result := True;
-end;
-
 function TObjectDataManager.ItemMove(const dbPath, ItemName, DestPath: SystemString): Boolean;
 begin
   Result := dbPack_MoveItem(dbPath, ItemName, DestPath, FDefaultItemID, FObjectDataHandle);
@@ -1098,80 +1055,6 @@ end;
 function TObjectDataManager.ItemRead(var ItemHnd: TItemHandle; const aSize: Int64; var Buffers): Boolean;
 begin
   Result := dbPack_ItemRead(aSize, Buffers, ItemHnd, FObjectDataHandle);
-end;
-
-function TObjectDataManager.ItemReadBool(var ItemHnd: TItemHandle; var Value: Boolean): Boolean;
-var
-  TempValue: Byte;
-begin
-  TempValue := 0;
-  Result := dbPack_ItemRead(1, TempValue, ItemHnd, FObjectDataHandle);
-  Value := (TempValue = 1);
-end;
-
-function TObjectDataManager.ItemReadInt(var ItemHnd: TItemHandle; var Value: Integer): Boolean;
-begin
-  Result := dbPack_ItemRead(umlIntegerLength, Value, ItemHnd, FObjectDataHandle);
-end;
-
-function TObjectDataManager.ItemReadReturnBool(var ItemHnd: TItemHandle; const DefaultValue: Boolean): Boolean;
-var
-  TempValue: Byte;
-begin
-  TempValue := 0;
-  if dbPack_ItemRead(1, TempValue, ItemHnd, FObjectDataHandle) then
-      Result := (TempValue = 1)
-  else
-      Result := DefaultValue;
-end;
-
-function TObjectDataManager.ItemReadReturnInt(var ItemHnd: TItemHandle; const DefaultValue: Integer): Integer;
-var
-  TempInt: Integer;
-begin
-  TempInt := DefaultValue;
-  if dbPack_ItemRead(umlIntegerLength, TempInt, ItemHnd, FObjectDataHandle) then
-      Result := TempInt
-  else
-      Result := DefaultValue;
-end;
-
-function TObjectDataManager.ItemReadReturnStr(var ItemHnd: TItemHandle; const DefaultValue: SystemString): SystemString;
-var
-  TempStr: umlString;
-begin
-  TempStr := DefaultValue;
-  if dbPack_ItemReadStr(TempStr, ItemHnd, FObjectDataHandle) then
-      Result := TempStr
-  else
-      Result := DefaultValue;
-end;
-
-function TObjectDataManager.ItemReadStr(var ItemHnd: TItemHandle; var Value: SystemString): Boolean;
-var
-  TempStr: umlString;
-begin
-  Result := dbPack_ItemReadStr(TempStr, ItemHnd, FObjectDataHandle);
-  if Result then
-      Value := TempStr;
-end;
-
-function TObjectDataManager.ItemReadTime(var ItemHnd: TItemHandle; var Value: TDateTime): Boolean;
-var
-  TempValue: Double;
-begin
-  if dbPack_ItemRead(umlDoubleLength, TempValue, ItemHnd, FObjectDataHandle) then
-    begin
-      try
-          Value := TempValue;
-      except
-      end;
-      Result := True;
-    end
-  else
-    begin
-      Result := False;
-    end;
 end;
 
 function TObjectDataManager.ItemSeekStart(var ItemHnd: TItemHandle): Boolean;
@@ -1214,106 +1097,6 @@ begin
   Result := dbPack_ItemWrite(aSize, Buffers, ItemHnd, FObjectDataHandle);
 end;
 
-function TObjectDataManager.ItemWriteBool(var ItemHnd: TItemHandle; const Value: Boolean): Boolean;
-var
-  TempValue: Byte;
-begin
-  if Value then
-      TempValue := 1
-  else
-      TempValue := 0;
-  Result := dbPack_ItemWrite(1, TempValue, ItemHnd, FObjectDataHandle);
-end;
-
-function TObjectDataManager.ItemWriteInt(var ItemHnd: TItemHandle; const Value: Integer): Boolean;
-var
-  TempValue: Integer;
-begin
-  TempValue := Value;
-  Result := dbPack_ItemWrite(umlIntegerLength, TempValue, ItemHnd, FObjectDataHandle);
-end;
-
-function TObjectDataManager.ItemWriteStr(var ItemHnd: TItemHandle; const Value: SystemString): Boolean;
-begin
-  Result := dbPack_ItemWriteStr(Value, ItemHnd, FObjectDataHandle);
-end;
-
-function TObjectDataManager.ItemWriteTime(var ItemHnd: TItemHandle; const Value: TDateTime): Boolean;
-var
-  TempValue: Double;
-begin
-  TempValue := Value;
-  Result := dbPack_ItemWrite(umlDoubleLength, TempValue, ItemHnd, FObjectDataHandle);
-end;
-
-function TObjectDataManager.ReadBool(const Section, Item: SystemString; const Value: Boolean): Boolean;
-begin
-  if Value then
-      Result := ReadString(Section, Item, '1') = '1'
-  else
-      Result := ReadString(Section, Item, '0') = '1';
-end;
-
-function TObjectDataManager.ReadString(const Section, Item, Value: SystemString): SystemString;
-var
-  TempStr     : SystemString;
-  DBItemHandle: TItemHandle;
-begin
-  Result := Value;
-  TempStr := Value;
-  if not ItemOpen(Section, Item, DBItemHandle) then
-    begin
-      ItemClose(DBItemHandle);
-      Exit;
-    end;
-  if not ItemReadStr(DBItemHandle, TempStr) then
-    begin
-      ItemClose(DBItemHandle);
-      Exit;
-    end;
-  ItemClose(DBItemHandle);
-  Result := TempStr;
-end;
-
-function TObjectDataManager.WriteBool(const Section, Item: SystemString; const Value: Boolean): Boolean;
-begin
-  if Value then
-      Result := WriteString(Section, Item, '1')
-  else
-      Result := WriteString(Section, Item, '0');
-end;
-
-function TObjectDataManager.WriteString(const Section, Item, Value: SystemString): Boolean;
-var
-  DBItemHandle: TItemHandle;
-begin
-  Result := False;
-
-  if not ItemExists(Section, Item) then
-    begin
-      if not ItemCreate(Section, Item, 'Section.Database', DBItemHandle) then
-        begin
-          ItemClose(DBItemHandle);
-          Exit;
-        end;
-    end
-  else
-    begin
-      if not ItemOpen(Section, Item, DBItemHandle) then
-        begin
-          ItemClose(DBItemHandle);
-          Exit;
-        end;
-    end;
-  if not ItemWriteStr(DBItemHandle, Value) then
-    begin
-      ItemClose(DBItemHandle);
-      Exit;
-    end;
-  ItemClose(DBItemHandle);
-  Result := True;
-end;
-
 function TObjectDataManager.RecursionSearchFirst(const InitPath, MaskName: SystemString; var RecursionSearchHnd: TItemRecursionSearch): Boolean;
 begin
   Init_TTMDBRecursionSearch(RecursionSearchHnd);
@@ -1328,6 +1111,410 @@ end;
 function TObjectDataManager.ObjectDataHandlePtr: PTMDB;
 begin
   Result := @FObjectDataHandle;
+end;
+
+procedure TObjectDataManagerOfCache.TObjectDataCacheItem.Write(var wVal: TItem);
+begin
+  Description := wVal.Description;
+  ExtID := wVal.ExtID;
+  FirstBlockPOS := wVal.FirstBlockPOS;
+  LastBlockPOS := wVal.LastBlockPOS;
+  Size := wVal.Size;
+  BlockCount := wVal.BlockCount;
+  CurrentBlockSeekPOS := wVal.CurrentBlockSeekPOS;
+  CurrentFileSeekPOS := wVal.CurrentFileSeekPOS;
+  DataWrited := wVal.DataWrited;
+  Return := wVal.Return;
+  MemorySiz := 0;
+end;
+
+procedure TObjectDataManagerOfCache.TObjectDataCacheItem.Read(var rVal: TItem);
+begin
+  rVal.Description := Description;
+  rVal.ExtID := ExtID;
+  rVal.FirstBlockPOS := FirstBlockPOS;
+  rVal.LastBlockPOS := LastBlockPOS;
+  rVal.Size := Size;
+  rVal.BlockCount := BlockCount;
+  rVal.CurrentBlockSeekPOS := CurrentBlockSeekPOS;
+  rVal.CurrentFileSeekPOS := CurrentFileSeekPOS;
+  rVal.DataWrited := DataWrited;
+  rVal.Return := Return;
+end;
+
+procedure TObjectDataManagerOfCache.TObjectDataCacheField.Write(var wVal: TField);
+begin
+  UpLevelFieldPOS := wVal.UpLevelFieldPOS;
+  Description := wVal.Description;
+  HeaderCount := wVal.HeaderCount;
+  FirstHeaderPOS := wVal.FirstHeaderPOS;
+  LastHeaderPOS := wVal.LastHeaderPOS;
+  Return := wVal.Return;
+  MemorySiz := 0;
+end;
+
+procedure TObjectDataManagerOfCache.TObjectDataCacheField.Read(var rVal: TField);
+begin
+  rVal.UpLevelFieldPOS := UpLevelFieldPOS;
+  rVal.Description := Description;
+  rVal.HeaderCount := HeaderCount;
+  rVal.FirstHeaderPOS := FirstHeaderPOS;
+  rVal.LastHeaderPOS := LastHeaderPOS;
+  rVal.Return := Return;
+end;
+
+procedure TObjectDataManagerOfCache.HeaderCache_AddDataProc(p: Pointer);
+begin
+end;
+
+procedure TObjectDataManagerOfCache.ItemBlockCache_AddDataProc(p: Pointer);
+begin
+end;
+
+procedure TObjectDataManagerOfCache.ItemCache_AddDataProc(p: Pointer);
+begin
+end;
+
+procedure TObjectDataManagerOfCache.FieldCache_AddDataProc(p: Pointer);
+begin
+end;
+
+procedure TObjectDataManagerOfCache.HeaderCache_DataFreeProc(p: Pointer);
+begin
+  Dispose(PObjectDataCacheHeader(p));
+end;
+
+procedure TObjectDataManagerOfCache.ItemBlockCache_DataFreeProc(p: Pointer);
+begin
+  Dispose(PObjectDataCacheItemBlock(p));
+end;
+
+procedure TObjectDataManagerOfCache.ItemCache_DataFreeProc(p: Pointer);
+begin
+  Dispose(PObjectDataCacheItem(p));
+end;
+
+procedure TObjectDataManagerOfCache.FieldCache_DataFreeProc(p: Pointer);
+begin
+  Dispose(PObjectDataCacheField(p));
+end;
+
+procedure TObjectDataManagerOfCache.HeaderWriteProc(fPos: Int64; var wVal: THeader);
+var
+  p: PObjectDataCacheHeader;
+begin
+  p := PObjectDataCacheHeader(FHeaderCache[wVal.CurrentHeader]);
+  if p = nil then
+    begin
+      try
+        new(p);
+        p^ := wVal;
+
+        FHeaderCache.Add(wVal.CurrentHeader, p, False);
+      finally
+      end;
+    end
+  else
+      p^ := wVal;
+
+  p^.Return := db_Header_ok;
+end;
+
+procedure TObjectDataManagerOfCache.HeaderReadProc(fPos: Int64; var rVal: THeader; var Done: Boolean);
+var
+  p: PObjectDataCacheHeader;
+begin
+  p := PObjectDataCacheHeader(FHeaderCache[fPos]);
+  Done := p <> nil;
+  if not Done then
+      Exit;
+  rVal := p^;
+end;
+
+procedure TObjectDataManagerOfCache.ItemBlockWriteProc(fPos: Int64; var wVal: TItemBlock);
+var
+  p: PObjectDataCacheItemBlock;
+begin
+  p := PObjectDataCacheItemBlock(FItemBlockCache[wVal.CurrentBlockPOS]);
+  if p = nil then
+    begin
+      try
+        new(p);
+        p^ := wVal;
+
+        FItemBlockCache.Add(wVal.CurrentBlockPOS, p, False);
+      finally
+      end;
+    end
+  else
+      p^ := wVal;
+
+  p^.Return := db_Item_ok;
+end;
+
+procedure TObjectDataManagerOfCache.ItemBlockReadProc(fPos: Int64; var rVal: TItemBlock; var Done: Boolean);
+var
+  p: PObjectDataCacheItemBlock;
+begin
+  p := PObjectDataCacheItemBlock(FItemBlockCache[fPos]);
+  Done := p <> nil;
+  if not Done then
+      Exit;
+  rVal := p^;
+end;
+
+procedure TObjectDataManagerOfCache.ItemWriteProc(fPos: Int64; var wVal: TItem);
+var
+  p: PObjectDataCacheItem;
+begin
+  HeaderWriteProc(fPos, wVal.RHeader);
+
+  p := PObjectDataCacheItem(FItemCache[wVal.RHeader.DataMainPOS]);
+  if p = nil then
+    begin
+      try
+        new(p);
+        p^.Write(wVal);
+
+        FItemCache.Add(wVal.RHeader.DataMainPOS, p, False);
+      finally
+      end;
+    end
+  else
+      p^.Write(wVal);
+
+  p^.Return := db_Item_ok;
+end;
+
+procedure TObjectDataManagerOfCache.ItemReadProc(fPos: Int64; var rVal: TItem; var Done: Boolean);
+var
+  p: PObjectDataCacheItem;
+begin
+  HeaderReadProc(fPos, rVal.RHeader, Done);
+
+  if not Done then
+      Exit;
+
+  p := PObjectDataCacheItem(FItemCache[rVal.RHeader.DataMainPOS]);
+  Done := p <> nil;
+  if not Done then
+      Exit;
+
+  p^.Read(rVal);
+end;
+
+procedure TObjectDataManagerOfCache.OnlyItemRecWriteProc(fPos: Int64; var wVal: TItem);
+var
+  p: PObjectDataCacheItem;
+begin
+  p := PObjectDataCacheItem(FItemCache[fPos]);
+  if p = nil then
+    begin
+      try
+        new(p);
+        p^.Write(wVal);
+
+        FItemCache.Add(fPos, p, False);
+      finally
+      end;
+    end
+  else
+      p^.Write(wVal);
+
+  p^.Return := db_Item_ok;
+end;
+
+procedure TObjectDataManagerOfCache.OnlyItemRecReadProc(fPos: Int64; var rVal: TItem; var Done: Boolean);
+var
+  p: PObjectDataCacheItem;
+begin
+  p := PObjectDataCacheItem(FItemCache[fPos]);
+  Done := p <> nil;
+  if not Done then
+      Exit;
+
+  p^.Read(rVal);
+end;
+
+procedure TObjectDataManagerOfCache.FieldWriteProc(fPos: Int64; var wVal: TField);
+var
+  p: PObjectDataCacheField;
+begin
+  HeaderWriteProc(fPos, wVal.RHeader);
+
+  p := PObjectDataCacheField(FFieldCache[wVal.RHeader.DataMainPOS]);
+  if p = nil then
+    begin
+      try
+        new(p);
+        p^.Write(wVal);
+
+        FFieldCache.Add(wVal.RHeader.DataMainPOS, p, False);
+      finally
+      end;
+    end
+  else
+      p^.Write(wVal);
+
+  p^.Return := db_Field_ok;
+end;
+
+procedure TObjectDataManagerOfCache.FieldReadProc(fPos: Int64; var rVal: TField; var Done: Boolean);
+var
+  p: PObjectDataCacheField;
+begin
+  HeaderReadProc(fPos, rVal.RHeader, Done);
+
+  if not Done then
+      Exit;
+
+  p := PObjectDataCacheField(FFieldCache[rVal.RHeader.DataMainPOS]);
+  Done := p <> nil;
+  if not Done then
+      Exit;
+
+  p^.Read(rVal);
+end;
+
+procedure TObjectDataManagerOfCache.OnlyFieldRecWriteProc(fPos: Int64; var wVal: TField);
+var
+  p: PObjectDataCacheField;
+begin
+  p := PObjectDataCacheField(FFieldCache[fPos]);
+  if p = nil then
+    begin
+      try
+        new(p);
+        p^.Write(wVal);
+
+        FFieldCache.Add(fPos, p, False);
+      finally
+      end;
+    end
+  else
+      p^.Write(wVal);
+
+  p^.Return := db_Field_ok;
+end;
+
+procedure TObjectDataManagerOfCache.OnlyFieldRecReadProc(fPos: Int64; var rVal: TField; var Done: Boolean);
+var
+  p: PObjectDataCacheField;
+begin
+  p := PObjectDataCacheField(FFieldCache[fPos]);
+  Done := p <> nil;
+  if not Done then
+      Exit;
+
+  p^.Read(rVal);
+end;
+
+procedure TObjectDataManagerOfCache.DoCreateFinish;
+begin
+  inherited DoCreateFinish;
+
+  FHeaderCache := TInt64HashPointerList.Create(10 * 10000);
+  FHeaderCache.AutoFreeData := True;
+  FHeaderCache.AccessOptimization := True;
+
+  FItemBlockCache := TInt64HashPointerList.Create(10 * 10000);
+  FItemBlockCache.AutoFreeData := True;
+  FItemBlockCache.AccessOptimization := True;
+
+  FItemCache := TInt64HashPointerList.Create(10 * 10000);
+  FItemCache.AutoFreeData := True;
+  FItemCache.AccessOptimization := True;
+
+  FFieldCache := TInt64HashPointerList.Create(10 * 10000);
+  FFieldCache.AutoFreeData := True;
+  FFieldCache.AccessOptimization := True;
+
+  {$IFDEF FPC}
+  FHeaderCache.OnAddDataNotifyProc := @HeaderCache_AddDataProc;
+  FItemBlockCache.OnAddDataNotifyProc := @ItemBlockCache_AddDataProc;
+  FItemCache.OnAddDataNotifyProc := @ItemCache_AddDataProc;
+  FFieldCache.OnAddDataNotifyProc := @FieldCache_AddDataProc;
+
+  FHeaderCache.OnDataFreeProc := @HeaderCache_DataFreeProc;
+  FItemBlockCache.OnDataFreeProc := @ItemBlockCache_DataFreeProc;
+  FItemCache.OnDataFreeProc := @ItemCache_DataFreeProc;
+  FFieldCache.OnDataFreeProc := @FieldCache_DataFreeProc;
+  {$ELSE}
+  FHeaderCache.OnAddDataNotifyProc := HeaderCache_AddDataProc;
+  FItemBlockCache.OnAddDataNotifyProc := ItemBlockCache_AddDataProc;
+  FItemCache.OnAddDataNotifyProc := ItemCache_AddDataProc;
+  FFieldCache.OnAddDataNotifyProc := FieldCache_AddDataProc;
+
+  FHeaderCache.OnDataFreeProc := HeaderCache_DataFreeProc;
+  FItemBlockCache.OnDataFreeProc := ItemBlockCache_DataFreeProc;
+  FItemCache.OnDataFreeProc := ItemCache_DataFreeProc;
+  FFieldCache.OnDataFreeProc := FieldCache_DataFreeProc;
+  {$ENDIF}
+  BuildDBCacheIntf;
+end;
+
+destructor TObjectDataManagerOfCache.Destroy;
+begin
+  FreeDBCacheIntf;
+  DisposeObject([FHeaderCache, FItemBlockCache, FItemCache, FFieldCache]);
+  inherited Destroy;
+end;
+
+procedure TObjectDataManagerOfCache.BuildDBCacheIntf;
+begin
+  {$IFDEF FPC}
+  ObjectDataHandlePtr^.OnWriteHeader := @HeaderWriteProc;
+  ObjectDataHandlePtr^.OnReadHeader := @HeaderReadProc;
+  ObjectDataHandlePtr^.OnWriteItemBlock := @ItemBlockWriteProc;
+  ObjectDataHandlePtr^.OnReadItemBlock := @ItemBlockReadProc;
+  ObjectDataHandlePtr^.OnWriteItem := @ItemWriteProc;
+  ObjectDataHandlePtr^.OnReadItem := @ItemReadProc;
+  ObjectDataHandlePtr^.OnOnlyWriteItemRec := @OnlyItemRecWriteProc;
+  ObjectDataHandlePtr^.OnOnlyReadItemRec := @OnlyItemRecReadProc;
+  ObjectDataHandlePtr^.OnWriteField := @FieldWriteProc;
+  ObjectDataHandlePtr^.OnReadField := @FieldReadProc;
+  ObjectDataHandlePtr^.OnOnlyWriteFieldRec := @OnlyFieldRecWriteProc;
+  ObjectDataHandlePtr^.OnOnlyReadFieldRec := @OnlyFieldRecReadProc;
+  {$ELSE}
+  ObjectDataHandlePtr^.OnWriteHeader := HeaderWriteProc;
+  ObjectDataHandlePtr^.OnReadHeader := HeaderReadProc;
+  ObjectDataHandlePtr^.OnWriteItemBlock := ItemBlockWriteProc;
+  ObjectDataHandlePtr^.OnReadItemBlock := ItemBlockReadProc;
+  ObjectDataHandlePtr^.OnWriteItem := ItemWriteProc;
+  ObjectDataHandlePtr^.OnReadItem := ItemReadProc;
+  ObjectDataHandlePtr^.OnOnlyWriteItemRec := OnlyItemRecWriteProc;
+  ObjectDataHandlePtr^.OnOnlyReadItemRec := OnlyItemRecReadProc;
+  ObjectDataHandlePtr^.OnWriteField := FieldWriteProc;
+  ObjectDataHandlePtr^.OnReadField := FieldReadProc;
+  ObjectDataHandlePtr^.OnOnlyWriteFieldRec := OnlyFieldRecWriteProc;
+  ObjectDataHandlePtr^.OnOnlyReadFieldRec := OnlyFieldRecReadProc;
+  {$ENDIF}
+end;
+
+procedure TObjectDataManagerOfCache.FreeDBCacheIntf;
+begin
+  ObjectDataHandlePtr^.OnWriteHeader := nil;
+  ObjectDataHandlePtr^.OnReadHeader := nil;
+  ObjectDataHandlePtr^.OnWriteItemBlock := nil;
+  ObjectDataHandlePtr^.OnReadItemBlock := nil;
+  ObjectDataHandlePtr^.OnWriteItem := nil;
+  ObjectDataHandlePtr^.OnReadItem := nil;
+  ObjectDataHandlePtr^.OnOnlyWriteItemRec := nil;
+  ObjectDataHandlePtr^.OnOnlyReadItemRec := nil;
+  ObjectDataHandlePtr^.OnWriteField := nil;
+  ObjectDataHandlePtr^.OnReadField := nil;
+  ObjectDataHandlePtr^.OnOnlyWriteFieldRec := nil;
+  ObjectDataHandlePtr^.OnOnlyReadFieldRec := nil;
+
+  CleaupCache;
+end;
+
+procedure TObjectDataManagerOfCache.CleaupCache;
+begin
+  FHeaderCache.Clear;
+  FItemBlockCache.Clear;
+  FItemCache.Clear;
+  FFieldCache.Clear;
 end;
 
 function TObjectDataMarshal.GetItems(aIndex: Integer): TObjectDataManager;
@@ -1349,11 +1536,13 @@ begin
           if not umlMatchLimitChar('\', aUName) then
               aUName := '*\' + aUName;
           for RepaInt := 0 to FLibList.Count - 1 do
-            if umlMultipleMatch(False, aUName, FLibList[RepaInt]) then
-              begin
-                Result := TObjectDataManager(FLibList.Objects[RepaInt]);
-                Exit;
-              end;
+            begin
+              if umlMultipleMatch(False, aUName, FLibList[RepaInt]) then
+                begin
+                  Result := TObjectDataManager(FLibList.Objects[RepaInt]);
+                  Exit;
+                end;
+            end;
         end
       else
         begin
@@ -1405,7 +1594,7 @@ end;
 
 function TObjectDataMarshal.GetAbsoluteFileName(aFileName: SystemString): SystemString;
 begin
-  Result := umlUpperCase(aFileName).Text;
+  Result := umlUpperCase(umlCharReplace(umlTrimSpace(aFileName), '/', '\')).Text;
 end;
 
 function TObjectDataMarshal.NewDB(aFile: SystemString; aOnlyRead: Boolean): TObjectDataManager;
@@ -1469,7 +1658,7 @@ begin
     if Items[i] = db then
         Delete(i)
     else
-        Inc(i);
+        inc(i);
 end;
 
 procedure TObjectDataMarshal.Clear;
@@ -1513,7 +1702,7 @@ begin
                   FLibList.Delete(RepaInt);
                 end
               else
-                  Inc(RepaInt);
+                  inc(RepaInt);
             end;
         end
       else
@@ -1529,7 +1718,7 @@ begin
                       FLibList.Delete(RepaInt);
                     end
                   else
-                      Inc(RepaInt);
+                      inc(RepaInt);
                 end;
             end
           else
@@ -1543,7 +1732,7 @@ begin
                       FLibList.Delete(RepaInt);
                     end
                   else
-                      Inc(RepaInt);
+                      inc(RepaInt);
                 end;
             end;
         end;

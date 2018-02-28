@@ -1,9 +1,11 @@
-{******************************************************************************}
-{* geometry 3D Advance library writen by QQ 600585@qq.com                     *}
-{* https://github.com/PassByYou888/CoreCipher                                 *}
-(* https://github.com/PassByYou888/ZServer4D                                  *)
-{******************************************************************************}
-
+{ ****************************************************************************** }
+{ * geometry 3D Advance library writen by QQ 600585@qq.com                     * }
+{ * https://github.com/PassByYou888/CoreCipher                                 * }
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
+{ ****************************************************************************** }
 
 unit Geometry3DUnit;
 
@@ -11,15 +13,16 @@ interface
 
 {$I zDefine.inc}
 
+
 uses Types, SysUtils,
-  GeometryLib, Geometry2DUnit;
+  GeometryLib, Geometry2DUnit, PascalStrings, UnicodeMixedLib;
 
 type
   TMat4 = TMatrix;
   TVec4 = TVector;
   TVec3 = TAffineVector;
 
-  TMatrix4 = record
+  TMatrix4 = packed record
     Link: TMat4;
   public
     {$IFNDEF FPC}
@@ -44,7 +47,7 @@ type
     function Turn(Angle: Single): TMatrix4;
   end;
 
-  TVector4 = record
+  TVector4 = packed record
     Link: TVec4;
   private
     function GetVec3: TVec3;
@@ -121,7 +124,7 @@ type
     function Cross(const v2: TVec4): TVector4; overload;
   end;
 
-  TVector3 = record
+  TVector3 = packed record
     Link: TVec3;
   private
     function GetVec2: TVec2;
@@ -192,7 +195,7 @@ type
     function Vec4: TVector4; overload;
   end;
 
-  TAABB = record
+  TAABB = packed record
     min, max: TAffineVector;
   public
     { : Resize the AABB if necessary to include p. }
@@ -235,19 +238,19 @@ function Vec2(const v: TVec4): TVec2; overload;
 function Vec2(const v: TVector3): TVec2; overload;
 function Vec2(const v: TVector4): TVec2; overload;
 
-function VecToStr(const v: TVec2): string; overload;
-function VecToStr(const v: TVec3): string; overload;
-function VecToStr(const v: TVec4): string; overload;
-function VecToStr(const v: TVector3): string; overload;
-function VecToStr(const v: TVector4): string; overload;
-function RectToStr(const v: T2DRect): string; overload;
+function VecToStr(const v: TVec2): SystemString; overload;
+function VecToStr(const v: TVec3): SystemString; overload;
+function VecToStr(const v: TVec4): SystemString; overload;
+function VecToStr(const v: TVector3): SystemString; overload;
+function VecToStr(const v: TVector4): SystemString; overload;
+function RectToStr(const v: T2DRect): SystemString; overload;
 
-function StrToVec2(const s: string): TVec2;
-function StrToVec3(const s: string): TVec3;
-function StrToVec4(const s: string): TVec4;
-function StrToVector3(const s: string): TVector3;
-function StrToVector4(const s: string): TVector4;
-function StrToRect(const s: string): T2DRect;
+function StrToVec2(const s: SystemString): TVec2;
+function StrToVec3(const s: SystemString): TVec3;
+function StrToVec4(const s: SystemString): TVec4;
+function StrToVector3(const s: SystemString): TVector3;
+function StrToVector4(const s: SystemString): TVector4;
+function StrToRect(const s: SystemString): T2DRect;
 
 function BounceVector(Current: TVector4; DeltaDistance: Single; BeginVector, EndVector: TVector4; var EndFlag: Boolean): TVector4; overload;
 function BounceVector(Current: TVector3; DeltaDistance: Single; BeginVector, EndVector: TVector3; var EndFlag: Boolean): TVector3; overload;
@@ -259,28 +262,28 @@ function GetMin(const arry: array of Integer): Integer; overload;
 function GetMax(const arry: array of TGeoFloat): TGeoFloat; overload;
 function GetMax(const arry: array of Integer): Integer; overload;
 
-function FinalAngle(a: TGeoFloat): TGeoFloat; inline;
-function CalcAngle(v1, v2: T2DPoint): TGeoFloat; inline;
-function AngleDistance(sour, Dest: TGeoFloat): TGeoFloat; inline;
-function SmoothAngle(sour, Dest, Delta: TGeoFloat): TGeoFloat; inline;
-function AngleEqual(a1, a2: TGeoFloat): Boolean; inline;
+function FinalAngle(a: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function CalcAngle(v1, v2: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function AngleDistance(sour, Dest: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function SmoothAngle(sour, Dest, Delta: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function AngleEqual(a1, a2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function distance(v1, v2: T2DPoint): TGeoFloat; inline; overload;
-function distance(v1, v2: T2DRect): TGeoFloat; inline; overload;
+function distance(v1, v2: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function distance(v1, v2: T2DRect): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function MovementLerp(s, d, Lerp: TGeoFloat): TGeoFloat; inline; overload;
-function MovementLerp(s, d: T2DPoint; Lerp: TGeoFloat): T2DPoint; inline; overload;
-function MovementLerp(s, d: T2DRect; Lerp: TGeoFloat): T2DRect; inline; overload;
+function MovementLerp(s, d, Lerp: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MovementLerp(s, d: T2DPoint; Lerp: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MovementLerp(s, d: T2DRect; Lerp: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function MovementDistance(s, d: T2DPoint; dt: TGeoFloat): T2DPoint; inline; overload;
-function MovementDistance(s, d: T2DRect; dt: TGeoFloat): T2DRect; inline; overload;
+function MovementDistance(s, d: T2DPoint; dt: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MovementDistance(s, d: T2DRect; dt: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function MovementDistance(sour, Dest: TVector4; distance: Single): TVector4; inline; overload;
-function MovementDistance(sour, Dest: TVector3; distance: Single): TVector3; inline; overload;
+function MovementDistance(sour, Dest: TVector4; distance: Single): TVector4; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MovementDistance(sour, Dest: TVector3; distance: Single): TVector3; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function MovementDistanceDeltaTime(s, d: T2DPoint; ASpeed: TGeoFloat): Double; inline; overload;
-function MovementDistanceDeltaTime(s, d: T2DRect; ASpeed: TGeoFloat): Double; inline; overload;
-function AngleRollDistanceDeltaTime(s, d: TGeoFloat; ARollSpeed: TGeoFloat): Double; inline; overload;
+function MovementDistanceDeltaTime(s, d: T2DPoint; ASpeed: TGeoFloat): Double; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MovementDistanceDeltaTime(s, d: T2DRect; ASpeed: TGeoFloat): Double; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function AngleRollDistanceDeltaTime(s, d: TGeoFloat; ARollSpeed: TGeoFloat): Double; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 {$IFDEF FPC}
 
@@ -333,8 +336,6 @@ operator - (const a: TVector3; const b: TVector3): TVector3;
 {$ENDIF}
 
 implementation
-
-uses PascalStrings, UnicodeMixedLib;
 
 function Vector4(X, Y, Z, W: Single): TVector4;
 begin
@@ -468,37 +469,37 @@ begin
   Result[1] := v.Link[1];
 end;
 
-function VecToStr(const v: TVec2): string;
+function VecToStr(const v: TVec2): SystemString;
 begin
   Result := Format('%g,%g', [v[0], v[1]]);
 end;
 
-function VecToStr(const v: TVec3): string;
+function VecToStr(const v: TVec3): SystemString;
 begin
   Result := Format('%g,%g,%g', [v[0], v[1], v[2]]);
 end;
 
-function VecToStr(const v: TVec4): string;
+function VecToStr(const v: TVec4): SystemString;
 begin
   Result := Format('%g,%g,%g,%g', [v[0], v[1], v[2], v[3]]);
 end;
 
-function VecToStr(const v: TVector3): string;
+function VecToStr(const v: TVector3): SystemString;
 begin
   Result := VecToStr(v.Link);
 end;
 
-function VecToStr(const v: TVector4): string;
+function VecToStr(const v: TVector4): SystemString;
 begin
   Result := VecToStr(v.Link);
 end;
 
-function RectToStr(const v: T2DRect): string;
+function RectToStr(const v: T2DRect): SystemString;
 begin
   Result := Format('%g,%g,%g,%g', [v[0][0], v[0][1], v[1][0], v[1][1]]);
 end;
 
-function StrToVec2(const s: string): TVec2;
+function StrToVec2(const s: SystemString): TVec2;
 var
   v, v1, v2: umlString;
 begin
@@ -511,7 +512,7 @@ begin
   Result[1] := umlStrToFloat(v2, 0);
 end;
 
-function StrToVec3(const s: string): TVec3;
+function StrToVec3(const s: SystemString): TVec3;
 var
   v, v1, v2, v3: umlString;
 begin
@@ -527,7 +528,7 @@ begin
   Result[2] := umlStrToFloat(v3, 0);
 end;
 
-function StrToVec4(const s: string): TVec4;
+function StrToVec4(const s: SystemString): TVec4;
 var
   v, v1, v2, v3, v4: umlString;
 begin
@@ -546,7 +547,7 @@ begin
   Result[3] := umlStrToFloat(v4, 0);
 end;
 
-function StrToVector3(const s: string): TVector3;
+function StrToVector3(const s: SystemString): TVector3;
 var
   v, v1, v2, v3: umlString;
 begin
@@ -562,7 +563,7 @@ begin
   Result.Link[2] := umlStrToFloat(v3, 0);
 end;
 
-function StrToVector4(const s: string): TVector4;
+function StrToVector4(const s: SystemString): TVector4;
 var
   v, v1, v2, v3, v4: umlString;
 begin
@@ -581,7 +582,7 @@ begin
   Result.Link[3] := umlStrToFloat(v4, 0);
 end;
 
-function StrToRect(const s: string): T2DRect;
+function StrToRect(const s: SystemString): T2DRect;
 var
   v, v1, v2, v3, v4: umlString;
 begin
@@ -670,7 +671,7 @@ begin
 end;
 
 function BounceFloat(const CurrentVal, DeltaVal, StartVal, OverVal: TGeoFloat; var EndFlag: Boolean): TGeoFloat;
-  function IfOut(Cur, Delta, Dest: Single): Boolean; inline;
+  function IfOut(Cur, Delta, Dest: Single): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   begin
     if Cur > Dest then
         Result := Cur - Delta < Dest
@@ -678,7 +679,7 @@ function BounceFloat(const CurrentVal, DeltaVal, StartVal, OverVal: TGeoFloat; v
         Result := Cur + Delta > Dest;
   end;
 
-  function GetOutValue(Cur, Delta, Dest: Single): Single; inline;
+  function GetOutValue(Cur, Delta, Dest: Single): Single; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   begin
     if IfOut(Cur, Delta, Dest) then
       begin
@@ -691,7 +692,7 @@ function BounceFloat(const CurrentVal, DeltaVal, StartVal, OverVal: TGeoFloat; v
         Result := 0;
   end;
 
-  function GetDeltaValue(Cur, Delta, Dest: Single): Single; inline;
+  function GetDeltaValue(Cur, Delta, Dest: Single): Single; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   begin
     if Cur > Dest then
         Result := Cur - Delta
@@ -894,7 +895,7 @@ begin
       Result[1] := d[1];
 end;
 
-function MovementDistance(sour, Dest: TVector4; distance: Single): TVector4; inline;
+function MovementDistance(sour, Dest: TVector4; distance: Single): TVector4; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 var
   k: Single;
 begin
@@ -908,7 +909,7 @@ begin
   Result[3] := sour[3] + k * (Dest[3] - sour[3]);
 end;
 
-function MovementDistance(sour, Dest: TVector3; distance: Single): TVector3; inline;
+function MovementDistance(sour, Dest: TVector3; distance: Single): TVector3; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 var
   k: Single;
 begin

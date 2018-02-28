@@ -1,5 +1,5 @@
 unit ADServFrm;
-
+
 interface
 
 uses
@@ -9,7 +9,7 @@ uses
   CommunicationFramework_Server_ICS,
   CommunicationFramework_Server_Indy,
   CommunicationFramework_Server_CrossSocket, DoStatusIO, CoreClasses,
-  DataFrameEngine, CommunicationFrameworkDoubleTunnelIO;
+  DataFrameEngine, CommunicationFrameworkDoubleTunnelIO, CommunicationFrameworkDoubleTunnelIO_VirtualAuth;
 
 type
   TAuthDoubleServerForm = class;
@@ -38,6 +38,7 @@ type
     Timer1: TTimer;
     ChangeCaptionButton: TButton;
     GetClientValueButton: TButton;
+    TimeLabel: TLabel;
     procedure StartServiceButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -49,8 +50,8 @@ type
     procedure DoStatusNear(AText: string; const ID: Integer);
   public
     { Public declarations }
-    RecvTunnel: TCommunicationFramework_Server_CrossSocket;
-    SendTunnel: TCommunicationFramework_Server_CrossSocket;
+    RecvTunnel: TCommunicationFramework_Server_ICS;
+    SendTunnel: TCommunicationFramework_Server_ICS;
     Service   : TMyService;
   end;
 
@@ -154,6 +155,7 @@ var
 begin
   de := TDataFrameEngine.Create;
   de.WriteString('change caption as hello World,from server!');
+  // 广播方法不会区分客户端是否有登录，是否建立成功了双通道
   SendTunnel.BroadcastSendDirectStreamCmd('ChangeCaption', de);
   disposeObject(de);
 end;
@@ -167,9 +169,21 @@ procedure TAuthDoubleServerForm.FormCreate(Sender: TObject);
 begin
   AddDoStatusHook(self, DoStatusNear);
 
-  RecvTunnel := TCommunicationFramework_Server_CrossSocket.Create;
-  SendTunnel := TCommunicationFramework_Server_CrossSocket.Create;
+  RecvTunnel := TCommunicationFramework_Server_ICS.Create;
+  SendTunnel := TCommunicationFramework_Server_ICS.Create;
   Service := TMyService.Create(RecvTunnel, SendTunnel);
+
+  // 默认情况下，TMyService不会保存用户信息到UserDB，在每次退出服务器都会产生许多没用的目录
+  // 当我们将CanSaveUserInfo打开以后，所有的用户信息都将被永久记录
+  // 注意：未来当我们要维护时用户数据库时，只能通过编程来干，直接管理文件是反人类的
+  Service.CanSaveUserInfo := True;
+
+  // 带验证的双通道服务器启动时 必须手动读取用户数据库 这一步会大量使用交换内存 如果UserDB大小为300M 读取时大概需要2G内存开销
+  // 在用户登录后，为了加快用户资料检索，所有用户信息存在与内存中，如果UserDB大小为300M 运行时大概需要1G的内存开销
+  // 如果用户太多，诸如超过10万，那么x86平台的内存是不够用的，你需要x64
+  // LoadUserDB内部使用了是高速Hash表进行搜索，读取非常快 但非常消耗内存
+  Service.LoadUserDB;
+
   Service.f := self;
   Service.CanRegisterNewUser := True;
 end;
@@ -181,14 +195,20 @@ begin
 end;
 
 procedure TAuthDoubleServerForm.GetClientValueButtonClick(Sender: TObject);
-var
-  i : Integer;
-  c : TPeerClient;
-  de: TDataFrameEngine;
 begin
-  for i := 0 to SendTunnel.Count - 1 do
+  SendTunnel.ProgressPerClient(procedure(PeerClient: TPeerClient)
+    var
+      c: TPeerClient;
+      de: TDataFrameEngine;
     begin
-      c := SendTunnel[i];
+      c := PeerClient;
+      // 如果客户端没有登录成功
+      if TPeerClientUserDefineForSendTunnel(c.UserDefine).RecvTunnel = nil then
+          exit;
+      // 和上列一样，如果客户端没有登录
+      if not TPeerClientUserDefineForSendTunnel(c.UserDefine).RecvTunnel.LinkOK then
+          exit;
+
       de := TDataFrameEngine.Create;
       de.WriteString('change caption as hello World,from server!');
       c.SendStreamCmd('GetClientValue', de,
@@ -198,30 +218,32 @@ begin
               DoStatus('getClientValue [%s] response:%s', [c.GetPeerIP, ResultData.Reader.ReadString]);
         end);
       disposeObject(de);
-    end;
+    end);
 end;
 
 procedure TAuthDoubleServerForm.StartServiceButtonClick(Sender: TObject);
 begin
-  // 基于CrosssSocket官方文档，绑定如果Host接口如果为空，绑定所有IPV6+IPV4的IP地址
-  // 如果Host接口为0.0.0.0绑定所有IPV4地址，::绑定所有IPV6地址
-  if SendTunnel.StartService('', 9816) then
+  // 基于ICS官方文档，绑定Host接口不能为空，需要指定IPV4 or IPV6
+  if SendTunnel.StartService('0.0.0.0', 9816) then
       DoStatus('listen send service success')
   else
       DoStatus('listen send service failed!');
   SendTunnel.IDCounter := 100;
 
-  if RecvTunnel.StartService('', 9815) then
+  if RecvTunnel.StartService('0.0.0.0', 9815) then
       DoStatus('listen Recv service success')
   else
       DoStatus('listen Recv service failed!');
 
+  Service.UnRegisterCommand;
   Service.RegisterCommand;
 end;
 
 procedure TAuthDoubleServerForm.Timer1Timer(Sender: TObject);
 begin
   Service.Progress;
+  timeLabel.Caption:=Format('sync time:%f', [Service.CadencerEngine.UpdateCurrentTime]);
 end;
 
 end.
+

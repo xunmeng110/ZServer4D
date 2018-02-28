@@ -1,10 +1,11 @@
 unit EzCliFrm;
-
+
 interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
+  JsonDataObjects,
   CommunicationFramework,
   DoStatusIO, CoreClasses,
   CommunicationFramework_Client_CrossSocket,
@@ -21,6 +22,7 @@ type
     HelloWorldBtn: TButton;
     sendMiniStreamButton: TButton;
     SendBigStreamButton: TButton;
+    SendCompletebufferButton: TButton;
     procedure ConnectButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -28,6 +30,7 @@ type
     procedure HelloWorldBtnClick(Sender: TObject);
     procedure sendMiniStreamButtonClick(Sender: TObject);
     procedure SendBigStreamButtonClick(Sender: TObject);
+    procedure SendCompletebufferButtonClick(Sender: TObject);
   private
     { Private declarations }
     procedure DoStatusNear(AText: string; const ID: Integer);
@@ -71,6 +74,7 @@ end;
 procedure TEZClientForm.HelloWorldBtnClick(Sender: TObject);
 var
   SendDe, ResultDE: TDataFrameEngine;
+  js              : TJsonObject;
 begin
   // 往服务器发送一条console形式的hello world指令
   client.SendDirectConsoleCmd('helloWorld_Console', '');
@@ -106,6 +110,14 @@ begin
   if ResultDE.Count > 0 then
       DoStatus('server response:%s', [ResultDE.Reader.ReadString]);
   DisposeObject([SendDe, ResultDE]);
+
+  // json收发
+  js := TJsonObject.Create;
+  js.S['中文测试'] := '你好世界';
+  SendDe := TDataFrameEngine.Create;
+  SendDe.WriteJson(js);
+  client.SendDirectStreamCmd('Json_Stream', SendDe);
+  DisposeObject([js, SendDe]);
 end;
 
 procedure TEZClientForm.SendBigStreamButtonClick(Sender: TObject);
@@ -127,10 +139,35 @@ begin
     end;
 
   DoStatus('计算临时大数据流md5');
-  DoStatus('md5:' + umlMD5Char(ms.Memory, ms.Size).Text);
+  DoStatus('bigstream md5:' + umlMD5Char(ms.Memory, ms.Size).Text);
 
   // 往服务器发送一条Big Stream形式的指令
   client.SendBigStream('Test128MBigStream', ms, True);
+end;
+
+procedure TEZClientForm.SendCompletebufferButtonClick(Sender: TObject);
+var
+  buff: Pointer;
+  p   : PInt64;
+  i   : Integer;
+begin
+  // 在ms中包含了128M大型数据，在服务器端相当于执行了1条普通命令
+  buff := GetMemory(128 * 1024 * 1024);
+
+  DoStatus('创建128M临时大数据流');
+  p := buff;
+  for i := 1 to (128 * 1024 * 1024) div SizeOf(Int64) do
+    begin
+      p^ := Random(MaxInt);
+      inc(p);
+    end;
+
+  DoStatus('计算临时大数据流md5');
+  DoStatus('complete buffer md5:' + umlMD5String(buff, 128 * 1024 * 1024).Text);
+
+  // 往服务器发送一条CompleteBuffer形式的指令
+  // 最后的布尔参数表示是否在完成发送后释放buff
+  client.SendCompleteBuffer('TestCompleteBuffer', buff, 128 * 1024 * 1024, True);
 end;
 
 procedure TEZClientForm.sendMiniStreamButtonClick(Sender: TObject);
@@ -151,7 +188,7 @@ begin
       inc(p);
     end;
 
-  DoStatus(umlMD5Char(ms.Memory, ms.Size).Text);
+  DoStatus('mini stream md5:' + umlMD5Char(ms.Memory, ms.Size).Text);
 
   // 往服务器发送一条direct stream形式的指令
   SendDe := TDataFrameEngine.Create;
@@ -167,10 +204,25 @@ end;
 
 procedure TEZClientForm.ConnectButtonClick(Sender: TObject);
 begin
-  if client.Connect(HostEdit.Text, 9818) then
-      DoStatus('connect success');
+  // 方法1，阻塞式链接
+  // if client.Connect(HostEdit.Text, 9818) then
+  // DoStatus('链接成功')
+  // else
+  // DoStatus('链接失败');
 
-  DoStatus('current client id:', [client.ClientIO.ID]);
+  // 方法2，异步高速链接
+  client.AsyncConnect(HostEdit.Text, 9818, procedure(const cState: Boolean)
+    begin
+      if cState then
+        begin
+          DoStatus('链接成功');
+          DoStatus('current client id: %d', [client.ClientIO.ID]);
+        end
+      else
+          DoStatus('链接失败');
+    end);
+
 end;
 
 end.
+

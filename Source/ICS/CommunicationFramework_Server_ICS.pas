@@ -1,20 +1,24 @@
-{ ****************************************************************************** }
+﻿{ ****************************************************************************** }
 { * ics support                                                                * }
 { * written by QQ 600585@qq.com                                                * }
 { * https://github.com/PassByYou888/CoreCipher                                 * }
-(* https://github.com/PassByYou888/ZServer4D *)
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
 { ****************************************************************************** }
 (*
   update history
 *)
 unit CommunicationFramework_Server_ICS;
 
-{$I ..\..\zDefine.inc}
+{$I ..\zDefine.inc}
 
 interface
 
 uses Windows, SysUtils, Classes, Messages,
   OverByteIcsWSocket,
+  PascalStrings,
   CommunicationFramework_Server_ICSCustomSocket,
   CommunicationFramework, CoreClasses, DoStatusIO, DataFrameEngine;
 
@@ -38,17 +42,17 @@ type
     procedure ProcessThreadTrigger;
   end;
 
-  TPeerClientIntfForICS = class(TPeerClient)
+  TPeerClientIntfForICS = class(TPeerIO)
   public
     FContext: TICSContext;
 
     function Connected: Boolean; override;
     procedure Disconnect; override;
-    procedure SendByteBuffer(buff: PByte; size: Integer); override;
+    procedure SendByteBuffer(const buff: PByte; const Size: NativeInt); override;
     procedure WriteBufferOpen; override;
     procedure WriteBufferFlush; override;
     procedure WriteBufferClose; override;
-    function GetPeerIP: string; override;
+    function GetPeerIP: SystemString; override;
 
     procedure ContinueResultSend; override;
   end;
@@ -81,7 +85,7 @@ type
   TCommunicationFramework_Server_ICS = class(TCommunicationFrameworkServer)
   private
     FDriver        : TCustomICSSocketServer;
-    FBindHost      : string;
+    FBindHost      : SystemString;
     FBindPort      : Word;
     FStartedService: Boolean;
 
@@ -93,17 +97,18 @@ type
     destructor Destroy; override;
 
     procedure StopService; override;
-    function StartService(Host: string; Port: Word): Boolean; override;
+    function StartService(Host: SystemString; Port: Word): Boolean; override;
 
     procedure TriggerQueueData(v: PQueueData); override;
+
     procedure ProgressBackground; override;
 
-    function WaitSendConsoleCmd(Client: TPeerClient; Cmd: string; ConsoleData: string; TimeOut: TTimeTickValue): string; overload; override;
-    procedure WaitSendStreamCmd(Client: TPeerClient; Cmd: string; StreamData, ResultData: TDataFrameEngine; TimeOut: TTimeTickValue); overload; override;
+    function WaitSendConsoleCmd(Client: TPeerIO; const Cmd, ConsoleData: SystemString; TimeOut: TTimeTickValue): SystemString; override;
+    procedure WaitSendStreamCmd(Client: TPeerIO; const Cmd: SystemString; StreamData, ResultData: TDataFrameEngine; TimeOut: TTimeTickValue); override;
 
     property StartedService: Boolean read FStartedService;
     property Driver: TCustomICSSocketServer read FDriver;
-    property BindHost: string read FBindHost;
+    property BindHost: SystemString read FBindHost;
     property BindPort: Word read FBindPort;
   end;
 
@@ -306,11 +311,11 @@ begin
     end;
 end;
 
-procedure TPeerClientIntfForICS.SendByteBuffer(buff: PByte; size: Integer);
+procedure TPeerClientIntfForICS.SendByteBuffer(const buff: PByte; const Size: NativeInt);
 begin
   if Connected then
-    if size > 0 then
-        FContext.Send(buff, size);
+    if Size > 0 then
+        FContext.Send(buff, Size);
 end;
 
 procedure TPeerClientIntfForICS.WriteBufferOpen;
@@ -335,7 +340,7 @@ begin
   end;
 end;
 
-function TPeerClientIntfForICS.GetPeerIP: string;
+function TPeerClientIntfForICS.GetPeerIP: SystemString;
 begin
   if FContext <> nil then
       Result := FContext.PeerAddr
@@ -372,8 +377,7 @@ begin
   if BuffCount > 0 then
     begin
       try
-        FClientIntf.ReceivedBuffer.Position := FClientIntf.ReceivedBuffer.size;
-        FClientIntf.ReceivedBuffer.Write(buff[0], BuffCount);
+        FClientIntf.SaveReceiveBuffer(@buff[0], BuffCount);
         FClientIntf.FillRecvBuffer(FICSSocketThread, True, False);
       except
           Close;
@@ -480,6 +484,9 @@ end;
 procedure TCommunicationFramework_Server_ICS.ClientConnectEvent(Sender: TObject; Client: TCustomICSContext; Error: Word);
 begin
   DoStatus(Format('accept connect %s:%s ', [Client.GetPeerAddr, Client.GetPeerPort]));
+  Client.KeepAliveOnOff := TSocketKeepAliveOnOff.wsKeepAliveOnCustom;
+  Client.KeepAliveTime := 1 * 1000;     // 从心跳检查到断开的空闲时间
+  Client.KeepAliveInterval := 1 * 1000; // 心跳检查间隔
 end;
 
 procedure TCommunicationFramework_Server_ICS.ClientCreateContextEvent(Sender: TObject; Client: TCustomICSContext);
@@ -487,8 +494,14 @@ var
   cli: TICSContext;
   t  : TTimeTickValue;
 begin
+  if Count > 500 then
+    begin
+      Client.Close;
+      Exit;
+    end;
+
+  cli := TICSContext(Client);
   try
-    cli := Client as TICSContext;
     cli.FTimeOut := IdleTimeout;
 
     cli.ThreadDetach;
@@ -524,7 +537,9 @@ var
 begin
   cli := Client as TICSContext;
 
-  cli.FClientIntf.Print('disconnect %s:%s', [Client.GetPeerAddr, Client.GetPeerPort]);
+  if cli <> nil then
+    if cli.FClientIntf <> nil then
+        cli.FClientIntf.Print('disconnect %s:%s', [Client.GetPeerAddr, Client.GetPeerPort]);
 
   if cli.FICSSocketThread <> nil then
     begin
@@ -548,8 +563,6 @@ begin
 end;
 
 constructor TCommunicationFramework_Server_ICS.Create;
-var
-  r: TCommandStreamMode;
 begin
   inherited Create;
   FDriver := TCustomICSSocketServer.Create(nil);
@@ -576,7 +589,7 @@ begin
   inherited Destroy;
 end;
 
-function TCommunicationFramework_Server_ICS.StartService(Host: string; Port: Word): Boolean;
+function TCommunicationFramework_Server_ICS.StartService(Host: SystemString; Port: Word): Boolean;
 begin
   try
     // open listen
@@ -596,13 +609,16 @@ begin
 end;
 
 procedure TCommunicationFramework_Server_ICS.StopService;
-var
-  i: Integer;
 begin
-  LockClients;
-  for i := 0 to Count - 1 do
-      Items[i].Disconnect;
-  UnLockClients;
+  while Count > 0 do
+    begin
+      ProgressPerClient(procedure(cli: TPeerIO)
+        begin
+          cli.Disconnect;
+        end);
+      ProgressBackground;
+    end;
+
   try
     FDriver.Close;
     FStartedService := False;
@@ -624,19 +640,11 @@ begin
 end;
 
 procedure TCommunicationFramework_Server_ICS.ProgressBackground;
-var
-  i: Integer;
 begin
-  try
-    for i := 0 to Count - 1 do
-      begin
-        try
-            TPeerClientIntfForICS(Items[i]).FContext.ProcessClientActiveTime;
-        except
-        end;
-      end;
-  except
-  end;
+  ProgressPerClient(procedure(cli: TPeerIO)
+    begin
+      TPeerClientIntfForICS(cli).FContext.ProcessClientActiveTime;
+    end);
 
   inherited ProgressBackground;
 
@@ -646,13 +654,13 @@ begin
   end;
 end;
 
-function TCommunicationFramework_Server_ICS.WaitSendConsoleCmd(Client: TPeerClient; Cmd: string; ConsoleData: string; TimeOut: TTimeTickValue): string;
+function TCommunicationFramework_Server_ICS.WaitSendConsoleCmd(Client: TPeerIO; const Cmd, ConsoleData: SystemString; TimeOut: TTimeTickValue): SystemString;
 begin
   Result := '';
   RaiseInfo('WaitSend no Suppport ICSServer');
 end;
 
-procedure TCommunicationFramework_Server_ICS.WaitSendStreamCmd(Client: TPeerClient; Cmd: string; StreamData, ResultData: TDataFrameEngine; TimeOut: TTimeTickValue);
+procedure TCommunicationFramework_Server_ICS.WaitSendStreamCmd(Client: TPeerIO; const Cmd: SystemString; StreamData, ResultData: TDataFrameEngine; TimeOut: TTimeTickValue);
 begin
   RaiseInfo('WaitSend no Suppport ICSServer');
 end;

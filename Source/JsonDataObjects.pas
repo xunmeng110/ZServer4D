@@ -1,7 +1,12 @@
 {******************************************************************************}
 {* json object library,                                                       *}
 {* https://github.com/ahausladen/JsonDataObjects                              *}
-{******************************************************************************}
+{ * https://github.com/PassByYou888/CoreCipher                                 * }
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
+{ ****************************************************************************** }
 
 
 (*****************************************************************************
@@ -613,12 +618,12 @@ type
     procedure Add(const AValue: Integer); overload;
     procedure Add(const AValue: Int64); overload;
     procedure Add(const AValue: UInt64); overload;
-    procedure Add(const AValue: Double); overload;
-    procedure Add(const AValue: TDateTime); overload;
+    procedure AddF(const AValue: Double); overload;
+    procedure AddT(const AValue: TDateTime); overload;
     procedure Add(const AValue: Boolean); overload;
     procedure Add(const AValue: TJsonArray); overload;
     procedure Add(const AValue: TJsonObject); overload;
-    procedure Add(const AValue: Variant); overload;
+    procedure AddV(const AValue: Variant); overload;
     function AddArray: TJsonArray;
     function AddObject: TJsonObject; overload;
     procedure AddObject(const Value: TJsonObject); overload; inline; // makes it easier to add "null"
@@ -627,12 +632,12 @@ type
     procedure Insert(Index: Integer; const AValue: Integer); overload;
     procedure Insert(Index: Integer; const AValue: Int64); overload;
     procedure Insert(Index: Integer; const AValue: UInt64); overload;
-    procedure Insert(Index: Integer; const AValue: Double); overload;
-    procedure Insert(Index: Integer; const AValue: TDateTime); overload;
+    procedure InsertF(Index: Integer; const AValue: Double); overload;
+    procedure InsertT(Index: Integer; const AValue: TDateTime); overload;
     procedure Insert(Index: Integer; const AValue: Boolean); overload;
     procedure Insert(Index: Integer; const AValue: TJsonArray); overload;
     procedure Insert(Index: Integer; const AValue: TJsonObject); overload;
-    procedure Insert(Index: Integer; const AValue: Variant); overload;
+    procedure InsertV(Index: Integer; const AValue: Variant); overload;
     function InsertArray(Index: Integer): TJsonArray;
     function InsertObject(Index: Integer): TJsonObject; overload;
     procedure InsertObject(Index: Integer; const Value: TJsonObject); overload; inline; // makes it easier to insert "null"
@@ -2039,7 +2044,7 @@ begin
 
     jtkFloat:
       begin
-        Data.Add(FLook.F);
+        Data.AddF(FLook.F);
         Next;
       end;
 
@@ -3295,12 +3300,20 @@ begin
     Encoding := TEncoding.UTF8
   else
   begin
-    if Encoding = nil then
+    { if Encoding = nil then
       Encoding := TEncoding.Default;
 
-    Preamble := Encoding.GetPreamble;
-    if Preamble <> nil then
-      Stream.Write(Preamble[0], Length(Preamble));
+      Preamble := Encoding.GetPreamble;
+      if Preamble <> nil then
+      Stream.Write(Preamble[0], Length(Preamble)); }
+    if Encoding = nil then
+    begin
+      Encoding := TEncoding.UTF8; //thx qingfeng qq274838061
+
+      Preamble := Encoding.GetPreamble;
+      if Preamble <> nil then
+        Stream.Write(Preamble[0], Length(Preamble));
+    end;
   end;
 
   Writer.Init(Compact, Stream, Encoding, nil);
@@ -3729,7 +3742,7 @@ begin
   Data.ULongValue := AValue;
 end;
 
-procedure TJsonArray.Add(const AValue: Double);
+procedure TJsonArray.AddF(const AValue: Double);
 var
   Data: PJsonDataValue;
 begin
@@ -3737,7 +3750,7 @@ begin
   Data.FloatValue := AValue;
 end;
 
-procedure TJsonArray.Add(const AValue: TDateTime);
+procedure TJsonArray.AddT(const AValue: TDateTime);
 var
   Data: PJsonDataValue;
 begin
@@ -3753,7 +3766,7 @@ begin
   Data.Value := AValue;
 end;
 
-procedure TJsonArray.Add(const AValue: Variant);
+procedure TJsonArray.AddV(const AValue: Variant);
 var
   Data: PJsonDataValue;
 begin
@@ -3841,7 +3854,7 @@ begin
   Data.ULongValue := AValue;
 end;
 
-procedure TJsonArray.Insert(Index: Integer; const AValue: Double);
+procedure TJsonArray.InsertF(Index: Integer; const AValue: Double);
 var
   Data: PJsonDataValue;
 begin
@@ -3849,7 +3862,7 @@ begin
   Data.FloatValue := AValue;
 end;
 
-procedure TJsonArray.Insert(Index: Integer; const AValue: TDateTime);
+procedure TJsonArray.InsertT(Index: Integer; const AValue: TDateTime);
 var
   Data: PJsonDataValue;
 begin
@@ -3865,7 +3878,7 @@ begin
   Data.Value := AValue;
 end;
 
-procedure TJsonArray.Insert(Index: Integer; const AValue: Variant);
+procedure TJsonArray.InsertV(Index: Integer; const AValue: Variant);
 var
   Data: PJsonDataValue;
 begin

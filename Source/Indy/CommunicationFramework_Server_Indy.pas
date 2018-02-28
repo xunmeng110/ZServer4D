@@ -2,7 +2,10 @@
 { * IndyInterface                                                              * }
 { * written by QQ 600585@qq.com                                                * }
 { * https://github.com/PassByYou888/CoreCipher                                 * }
-(* https://github.com/PassByYou888/ZServer4D *)
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
 { ****************************************************************************** }
 (*
   update history
@@ -12,12 +15,13 @@ unit CommunicationFramework_Server_Indy;
   update history
 *)
 
-{$I ..\..\zDefine.inc}
+{$I ..\zDefine.inc}
 
 interface
 
 uses CommunicationFramework,
   CoreClasses,
+  PascalStrings,
   DataFrameEngine, ListEngine, MemoryStream64,
 
   Classes, SysUtils,
@@ -28,12 +32,12 @@ uses CommunicationFramework,
 type
   TCommunicationFramework_Server_Context = class;
 
-  TContextIntfForServer = class(TPeerClient)
+  TContextIntfForServer = class(TPeerIO)
   public
     RealSend    : Boolean;
     RealSendBuff: TMemoryStream64;
 
-    constructor Create(AOwnerFramework: TCommunicationFramework; AClientIntf: TCoreClassObject); override;
+    procedure CreateAfter; override;
     destructor Destroy; override;
 
     function Context: TCommunicationFramework_Server_Context;
@@ -41,11 +45,11 @@ type
 
     function Connected: Boolean; override;
     procedure Disconnect; override;
-    procedure SendByteBuffer(buff: PByte; size: Integer); override;
+    procedure SendByteBuffer(const buff: PByte; const Size: NativeInt); override;
     procedure WriteBufferOpen; override;
     procedure WriteBufferFlush; override;
     procedure WriteBufferClose; override;
-    function GetPeerIP: string; override;
+    function GetPeerIP: SystemString; override;
   end;
 
   TCommunicationFramework_Server_Context = class(TIdServerContext)
@@ -73,7 +77,7 @@ type
     property Port: Word read GetPort write SetPort;
 
     procedure StopService; override;
-    function StartService(Host: string; Port: Word): Boolean; override;
+    function StartService(Host: SystemString; Port: Word): Boolean; override;
 
     procedure Indy_Connect(AContext: TIdContext);
     procedure Indy_ContextCreated(AContext: TIdContext);
@@ -82,31 +86,25 @@ type
 
     procedure Indy_Execute(AContext: TIdContext);
 
-    function WaitSendConsoleCmd(Client: TPeerClient; Cmd: string; ConsoleData: string; TimeOut: TTimeTickValue): string; overload; override;
-    procedure WaitSendStreamCmd(Client: TPeerClient; Cmd: string; StreamData, ResultData: TDataFrameEngine; TimeOut: TTimeTickValue); overload; override;
+    function WaitSendConsoleCmd(Client: TPeerIO; const Cmd, ConsoleData: SystemString; TimeOut: TTimeTickValue): SystemString; override;
+    procedure WaitSendStreamCmd(Client: TPeerIO; const Cmd: SystemString; StreamData, ResultData: TDataFrameEngine; TimeOut: TTimeTickValue); override;
 
     property Driver: TIdTCPServer read FDriver;
   end;
 
 implementation
 
-uses UnicodeMixedLib, PascalStrings, DoStatusIO;
+uses UnicodeMixedLib, DoStatusIO;
 
-function ToIDBytes(p: PByte; size: Integer): TIdBytes;
-var
-  i: Integer;
+function ToIDBytes(p: PByte; Size: Integer): TIdBytes; inline;
 begin
-  SetLength(Result, size);
-  for i := 0 to size - 1 do
-    begin
-      Result[i] := p^;
-      inc(p);
-    end;
+  SetLength(Result, Size);
+  CopyPtr(p, @Result[0], Size);
 end;
 
-constructor TContextIntfForServer.Create(AOwnerFramework: TCommunicationFramework; AClientIntf: TCoreClassObject);
+procedure TContextIntfForServer.CreateAfter;
 begin
-  inherited Create(AOwnerFramework, AClientIntf);
+  inherited CreateAfter;
   RealSend := False;
   RealSendBuff := TMemoryStream64.Create;
 end;
@@ -124,12 +122,12 @@ end;
 
 procedure TContextIntfForServer.ProcesRealSendBuff;
 begin
-  if (RealSend) and (RealSendBuff.size > 0) then
+  if (RealSend) and (RealSendBuff.Size > 0) then
     begin
       LockObject(RealSendBuff);
       try
         Context.Connection.IOHandler.WriteBufferOpen;
-        Context.Connection.IOHandler.Write(ToIDBytes(RealSendBuff.Memory, RealSendBuff.size));
+        Context.Connection.IOHandler.Write(ToIDBytes(RealSendBuff.Memory, RealSendBuff.Size));
         Context.Connection.IOHandler.WriteBufferFlush;
         Context.Connection.IOHandler.WriteBufferClose;
       except
@@ -153,22 +151,22 @@ begin
   Context.Connection.Disconnect;
 end;
 
-procedure TContextIntfForServer.SendByteBuffer(buff: PByte; size: Integer);
+procedure TContextIntfForServer.SendByteBuffer(const buff: PByte; const Size: NativeInt);
 begin
-  if size > 0 then
+  if Size > 0 then
     begin
       if RealSend then
         begin
-          Context.Connection.IOHandler.Write(ToIDBytes(buff, size));
+          Context.Connection.IOHandler.Write(ToIDBytes(buff, Size));
           Context.LastTimeTick := GetTimeTickCount;
         end
       else
         begin
           LockObject(RealSendBuff);
           try
-            if RealSendBuff.size > 0 then
-                RealSendBuff.Position := RealSendBuff.size;
-            RealSendBuff.WritePtr(buff, size);
+            if RealSendBuff.Size > 0 then
+                RealSendBuff.Position := RealSendBuff.Size;
+            RealSendBuff.WritePtr(buff, Size);
           except
           end;
           UnLockObject(RealSendBuff);
@@ -194,7 +192,7 @@ begin
       Context.Connection.IOHandler.WriteBufferClose;
 end;
 
-function TContextIntfForServer.GetPeerIP: string;
+function TContextIntfForServer.GetPeerIP: SystemString;
 begin
   Result := Context.Binding.PeerIP;
 end;
@@ -233,7 +231,7 @@ end;
 
 constructor TCommunicationFramework_Server_Indy.Create;
 begin
-  inherited Create;
+  inherited Create(128);
   FDriver := TIdTCPServer.Create(nil);
   FDriver.UseNagle := False;
   FDriver.MaxConnections := 20;
@@ -249,11 +247,18 @@ end;
 
 destructor TCommunicationFramework_Server_Indy.Destroy;
 begin
+  ProgressPerClient(procedure(cli: TPeerIO)
+    begin
+      try
+          cli.Disconnect;
+      except
+      end;
+    end);
+
   try
     while Count > 0 do
       begin
-        Items[0].Disconnect;
-        CheckSynchronize;
+        CheckSynchronize(1);
       end;
   except
   end;
@@ -291,7 +296,7 @@ begin
     end;
 end;
 
-function TCommunicationFramework_Server_Indy.StartService(Host: string; Port: Word): Boolean;
+function TCommunicationFramework_Server_Indy.StartService(Host: SystemString; Port: Word): Boolean;
 begin
   FDriver.DefaultPort := Port;
   Result := False;
@@ -313,6 +318,7 @@ begin
   c := TCommunicationFramework_Server_Context(AContext);
   c.ClientIntf := TContextIntfForServer.Create(Self, c);
   DoConnected(c.ClientIntf);
+  c.Binding.SetKeepAliveValues(True, 2000, 2);
 end;
 
 procedure TCommunicationFramework_Server_Indy.Indy_ContextCreated(AContext: TIdContext);
@@ -349,8 +355,9 @@ end;
 
 procedure TCommunicationFramework_Server_Indy.Indy_Execute(AContext: TIdContext);
 var
-  t: TTimeTickValue;
-  c: TCommunicationFramework_Server_Context;
+  t   : TTimeTickValue;
+  c   : TCommunicationFramework_Server_Context;
+  iBuf: TIdBytes;
 begin
   c := TCommunicationFramework_Server_Context(AContext);
 
@@ -384,12 +391,14 @@ begin
           end);
 
         c.Connection.IOHandler.CheckForDataOnSource(10);
-        if c.Connection.IOHandler.InputBuffer.size > 0 then
+        if c.Connection.IOHandler.InputBuffer.Size > 0 then
           begin
             t := GetTimeTickCount + 5000;
             c.LastTimeTick := GetTimeTickCount;
-            c.ClientIntf.ReceivedBuffer.Position := c.ClientIntf.ReceivedBuffer.size;
-            c.Connection.IOHandler.InputBuffer.ExtractToStream(c.ClientIntf.ReceivedBuffer);
+            c.Connection.IOHandler.InputBuffer.ExtractToBytes(iBuf);
+            c.Connection.IOHandler.InputBuffer.Clear;
+            c.ClientIntf.SaveReceiveBuffer(@iBuf[0], Length(iBuf));
+            SetLength(iBuf, 0);
             try
                 c.ClientIntf.FillRecvBuffer(TIdYarnOfThread(AContext.Yarn).Thread, True, True);
             except
@@ -424,11 +433,13 @@ begin
 
   try
     c.Connection.IOHandler.CheckForDataOnSource(10);
-    while c.Connection.IOHandler.InputBuffer.size > 0 do
+    while c.Connection.IOHandler.InputBuffer.Size > 0 do
       begin
         c.LastTimeTick := GetTimeTickCount;
-        c.ClientIntf.ReceivedBuffer.Position := c.ClientIntf.ReceivedBuffer.size;
-        c.Connection.IOHandler.InputBuffer.ExtractToStream(c.ClientIntf.ReceivedBuffer);
+        c.Connection.IOHandler.InputBuffer.ExtractToBytes(iBuf);
+        c.Connection.IOHandler.InputBuffer.Clear;
+        c.ClientIntf.SaveReceiveBuffer(@iBuf[0], Length(iBuf));
+        SetLength(iBuf, 0);
         try
           c.ClientIntf.FillRecvBuffer(TIdYarnOfThread(AContext.Yarn).Thread, True, True);
           c.Connection.IOHandler.CheckForDataOnSource(10);
@@ -472,13 +483,13 @@ begin
     end);
 end;
 
-function TCommunicationFramework_Server_Indy.WaitSendConsoleCmd(Client: TPeerClient; Cmd: string; ConsoleData: string; TimeOut: TTimeTickValue): string;
+function TCommunicationFramework_Server_Indy.WaitSendConsoleCmd(Client: TPeerIO; const Cmd, ConsoleData: SystemString; TimeOut: TTimeTickValue): SystemString;
 begin
   Result := '';
   RaiseInfo('WaitSend no Suppport IndyServer');
 end;
 
-procedure TCommunicationFramework_Server_Indy.WaitSendStreamCmd(Client: TPeerClient; Cmd: string; StreamData, ResultData: TDataFrameEngine; TimeOut: TTimeTickValue);
+procedure TCommunicationFramework_Server_Indy.WaitSendStreamCmd(Client: TPeerIO; const Cmd: SystemString; StreamData, ResultData: TDataFrameEngine; TimeOut: TTimeTickValue);
 begin
   RaiseInfo('WaitSend no Suppport IndyServer');
 end;

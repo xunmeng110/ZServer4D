@@ -1,7 +1,10 @@
 { ****************************************************************************** }
 { * Low Object DB Imp library                                                  * }
 { * https://github.com/PassByYou888/CoreCipher                                 * }
-(* https://github.com/PassByYou888/ZServer4D *)
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
 { ****************************************************************************** }
 (*
   update history
@@ -15,13 +18,6 @@ unit ObjectData;
 interface
 
 uses UnicodeMixedLib;
-
-{$IFDEF release}
-{$DEFINE INLINE_ASM}
-{$ELSE}
-{$UNDEF INLINE_ASM}
-{$ENDIF}
-
 
 const
   umlVersionLength  = 2;
@@ -65,14 +61,15 @@ const
 type
   PHeader = ^THeader;
 
-  THeader = record
+  THeader = packed record
     CurrentHeader: Int64; // nowrite
     NextHeader, PrevHeader, DataMainPOS: Int64;
     CreateTime, LastModifyTime: Double;
     ID, PositionID: Byte;
     UserProperty: Cardinal; // external define
     Name: umlString;
-    Return: Integer; // nowrite
+    Return: Integer;       // nowrite
+    MemorySiz: NativeUInt; // nowrite
   end;
 
   TObjectDataHeaderWriteProc = procedure(fPos: Int64; var wVal: THeader) of object;
@@ -80,11 +77,12 @@ type
 
   PItemBlock = ^TItemBlock;
 
-  TItemBlock = record
+  TItemBlock = packed record
     IDFlags: Byte;
     CurrentBlockPOS, NextBlockPOS, PrevBlockPOS, DataBlockPOS: Int64;
     Size: Int64;
-    Return: Integer; // nowrite
+    Return: Integer;       // nowrite
+    MemorySiz: NativeUInt; // nowrite
   end;
 
   TObjectDataItemBlockWriteProc = procedure(fPos: Int64; var wVal: TItemBlock) of object;
@@ -92,7 +90,7 @@ type
 
   PItem = ^TItem;
 
-  TItem = record
+  TItem = packed record
     RHeader: THeader;
     Description: umlString;
     ExtID: Byte;
@@ -104,6 +102,7 @@ type
     CurrentItemBlock: TItemBlock; // nowrite
     DataWrited: Boolean;          // nowrite
     Return: Integer;              // nowrite
+    MemorySiz: NativeUInt;        // nowrite
   end;
 
   TObjectDataItemWriteProc = procedure(fPos: Int64; var wVal: TItem) of object;
@@ -111,19 +110,20 @@ type
 
   PField = ^TField;
 
-  TField = record
+  TField = packed record
     RHeader: THeader;
     UpLevelFieldPOS: Int64;
     Description: umlString;
     HeaderCount: Int64;
     FirstHeaderPOS, LastHeaderPOS: Int64;
-    Return: Integer; // nowrite
+    Return: Integer;       // nowrite
+    MemorySiz: NativeUInt; // nowrite
   end;
 
   TObjectDataFieldWriteProc = procedure(fPos: Int64; var wVal: TField) of object;
   TObjectDataFieldReadProc  = procedure(fPos: Int64; var rVal: TField; var Done: Boolean) of object;
 
-  TFieldSearch = record
+  TFieldSearch = packed record
     RHeader: THeader;
     InitFlags: Boolean;
     Name: umlString;
@@ -135,7 +135,7 @@ type
 
   PTMDB = ^TTMDB;
 
-  TTMDB = record
+  TTMDB = packed record
     FileDescription: umlString;
     MajorVer, MinorVer: SmallInt;
     CreateTime, LastModifyTime: Double;
@@ -144,7 +144,6 @@ type
     CurrentFieldLevel: Word;
     IOHnd: TIOHnd;
     OverWriteItem: Boolean;
-    WriteFlags: Boolean;
     AllowSameHeaderName: Boolean;
     OnWriteHeader: TObjectDataHeaderWriteProc;
     OnReadHeader: TObjectDataHeaderReadProc;
@@ -159,9 +158,10 @@ type
     OnOnlyWriteFieldRec: TObjectDataFieldWriteProc;
     OnOnlyReadFieldRec: TObjectDataFieldReadProc;
     Return: Integer;
+    MemorySiz: NativeUInt; // nowrite
   end;
 
-  TTMDBItemHandle = record
+  TTMDBItemHandle = packed record
     Item: TItem;
     Path: umlString;
     Name: umlString;
@@ -171,7 +171,7 @@ type
     OpenFlags: Boolean;
   end;
 
-  TTMDBSearchHeader = record
+  TTMDBSearchHeader = packed record
     Name: umlString;
     ID: Byte;
     CreateTime, LastModifyTime: Double;
@@ -180,7 +180,7 @@ type
     FieldSearch: TFieldSearch;
   end;
 
-  TTMDBSearchItem = record
+  TTMDBSearchItem = packed record
     Name: umlString;
     Description: umlString;
     ExtID: Byte;
@@ -190,7 +190,7 @@ type
     FieldSearch: TFieldSearch;
   end;
 
-  TTMDBSearchField = record
+  TTMDBSearchField = packed record
     Name: umlString;
     Description: umlString;
     HeaderCount: Int64;
@@ -199,7 +199,7 @@ type
     FieldSearch: TFieldSearch;
   end;
 
-  TTMDBDescriptionHandle = record
+  TTMDBDescriptionHandle = packed record
     StructVarID: Byte;
     StructDescription: umlString;
     StructNextPos, StructCurrentPos, StructPublicPos: Int64;
@@ -207,14 +207,14 @@ type
     StructPositionID: Byte;
   end;
 
-  TTMDBItemStruct = record
+  TTMDBItemStruct = packed record
     Description: umlString;
     StructCount: Int64;
     StructFirstPos, StructLastPos, ItemStructCurrentPos: Int64;
     DescriptionHandle: TTMDBDescriptionHandle;
   end;
 
-  TTMDBRecursionSearch = record
+  TTMDBRecursionSearch = packed record
     ReturnHeader: THeader;
     CurrentField: TField;
     InitPath: umlString;
@@ -260,165 +260,160 @@ function dbField_OnlyReadFieldRec(const fPos: Int64; var IOHnd: TIOHnd; var Send
 
 function dbMultipleMatch(const SourStr, DestStr: umlString): Boolean; inline;
 
-function dbHeader_FindNext(const Name: umlString; const FirstHeaderPOS, LastHeaderPOS: Int64; var IOHnd: TIOHnd; var SenderHeader: THeader): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbHeader_FindPrev(const Name: umlString; const LastHeaderPOS, FirstHeaderPOS: Int64; var IOHnd: TIOHnd; var SenderHeader: THeader): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbHeader_FindNext(const Name: umlString; const FirstHeaderPOS, LastHeaderPOS: Int64; var IOHnd: TIOHnd; var SenderHeader: THeader): Boolean; { inline token }
+function dbHeader_FindPrev(const Name: umlString; const LastHeaderPOS, FirstHeaderPOS: Int64; var IOHnd: TIOHnd; var SenderHeader: THeader): Boolean; { inline token }
 
-function dbItem_BlockCreate(var IOHnd: TIOHnd; var SenderItem: TItem): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbItem_BlockInit(var IOHnd: TIOHnd; var SenderItem: TItem): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbItem_BlockReadData(var IOHnd: TIOHnd; var SenderItem: TItem; var Buffers; const _Size: Int64): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbItem_BlockAppendWriteData(var IOHnd: TIOHnd; var SenderItem: TItem; var Buffers; const Size: Int64): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbItem_BlockWriteData(var IOHnd: TIOHnd; var SenderItem: TItem; var Buffers; const Size: Int64): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbItem_BlockSeekPOS(var IOHnd: TIOHnd; var SenderItem: TItem; const Position: Int64): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbItem_BlockGetPOS(var IOHnd: TIOHnd; var SenderItem: TItem): Int64; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbItem_BlockSeekStartPOS(var IOHnd: TIOHnd; var SenderItem: TItem): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbItem_BlockSeekLastPOS(var IOHnd: TIOHnd; var SenderItem: TItem): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbItem_BlockCreate(var IOHnd: TIOHnd; var SenderItem: TItem): Boolean;                                          { inline token }
+function dbItem_BlockInit(var IOHnd: TIOHnd; var SenderItem: TItem): Boolean;                                            { inline token }
+function dbItem_BlockReadData(var IOHnd: TIOHnd; var SenderItem: TItem; var Buffers; const _Size: Int64): Boolean;       { inline token }
+function dbItem_BlockAppendWriteData(var IOHnd: TIOHnd; var SenderItem: TItem; var Buffers; const Size: Int64): Boolean; { inline token }
+function dbItem_BlockWriteData(var IOHnd: TIOHnd; var SenderItem: TItem; var Buffers; const Size: Int64): Boolean;       { inline token }
+function dbItem_BlockSeekPOS(var IOHnd: TIOHnd; var SenderItem: TItem; const Position: Int64): Boolean;                  { inline token }
+function dbItem_BlockGetPOS(var IOHnd: TIOHnd; var SenderItem: TItem): Int64;                                            { inline token }
+function dbItem_BlockSeekStartPOS(var IOHnd: TIOHnd; var SenderItem: TItem): Boolean;                                    { inline token }
+function dbItem_BlockSeekLastPOS(var IOHnd: TIOHnd; var SenderItem: TItem): Boolean;                                     { inline token }
 
-function dbField_GetPOSField(const fPos: Int64; var IOHnd: TIOHnd): TField; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_GetPOSField(const fPos: Int64; var IOHnd: TIOHnd): TField; { inline token }
 
-function dbField_GetFirstHeader(const fPos: Int64; var IOHnd: TIOHnd): THeader; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_GetLastHeader(const fPos: Int64; var IOHnd: TIOHnd): THeader; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_GetFirstHeader(const fPos: Int64; var IOHnd: TIOHnd): THeader; { inline token }
+function dbField_GetLastHeader(const fPos: Int64; var IOHnd: TIOHnd): THeader;  { inline token }
 
-function dbField_OnlyFindFirstName(const Name: umlString; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_OnlyFindNextName(var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_OnlyFindLastName(const Name: umlString; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_OnlyFindPrevName(var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_OnlyFindFirstName(const Name: umlString; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; { inline token }
+function dbField_OnlyFindNextName(var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean;                                            { inline token }
+function dbField_OnlyFindLastName(const Name: umlString; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean;  { inline token }
+function dbField_OnlyFindPrevName(var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean;                                            { inline token }
 
-function dbField_FindFirst(const Name: umlString; const ID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindNext(var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindLast(const Name: umlString; const ID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindPrev(var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_FindFirst(const Name: umlString; const ID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; { inline token }
+function dbField_FindNext(var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean;                                                            { inline token }
+function dbField_FindLast(const Name: umlString; const ID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean;  { inline token }
+function dbField_FindPrev(var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean;                                                            { inline token }
 
-function dbField_FindFirstItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch; var SenderItem: TItem): Boolean; overload; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindNextItem(const ItemExtID: Byte; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch; var SenderItem: TItem): Boolean; overload; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindLastItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch; var SenderItem: TItem): Boolean; overload; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindPrevItem(const ItemExtID: Byte; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch; var SenderItem: TItem): Boolean; overload; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_FindFirstItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch; var SenderItem: TItem): Boolean; overload; { inline token }
+function dbField_FindNextItem(const ItemExtID: Byte; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch; var SenderItem: TItem): Boolean; overload;                                            { inline token }
+function dbField_FindLastItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch; var SenderItem: TItem): Boolean; overload;  { inline token }
+function dbField_FindPrevItem(const ItemExtID: Byte; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch; var SenderItem: TItem): Boolean; overload;                                            { inline token }
 
-function dbField_FindFirstItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; overload; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindNextItem(const ItemExtID: Byte; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; overload; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindLastItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; overload; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_FindPrevItem(const ItemExtID: Byte; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; overload; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_FindFirstItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; overload; { inline token }
+function dbField_FindNextItem(const ItemExtID: Byte; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; overload;                                            { inline token }
+function dbField_FindLastItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; overload;  { inline token }
+function dbField_FindPrevItem(const ItemExtID: Byte; var IOHnd: TIOHnd; var SenderFieldSearch: TFieldSearch): Boolean; overload;                                            { inline token }
 
-function dbField_ExistItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_ExistItem(const Name: umlString; const ItemExtID: Byte; const fPos: Int64; var IOHnd: TIOHnd): Boolean; { inline token }
 
-function dbField_ExistHeader(const Name: umlString; const ID: Byte; const fPos: Int64; var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_ExistHeader(const Name: umlString; const ID: Byte; const fPos: Int64; var IOHnd: TIOHnd): Boolean; { inline token }
 
-function dbField_CreateHeader(const Name: umlString; const ID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderHeader: THeader): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_InsertNewHeader(const Name: umlString; const ID: Byte; const fieldPos, InsertHeaderPos: Int64; var IOHnd: TIOHnd; var NewHeader: THeader): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_CreateHeader(const Name: umlString; const ID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderHeader: THeader): Boolean;                      { inline token }
+function dbField_InsertNewHeader(const Name: umlString; const ID: Byte; const fieldPos, InsertHeaderPos: Int64; var IOHnd: TIOHnd; var NewHeader: THeader): Boolean; { inline token }
 
-function dbField_DeleteHeader(const HeaderPOS, fieldPos: Int64; var IOHnd: TIOHnd; var SenderField: TField): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_MoveHeader(const HeaderPOS: Int64; const SourcerFieldPOS, TargetFieldPos: Int64; var IOHnd: TIOHnd; var SenderField: TField): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_DeleteHeader(const HeaderPOS, fieldPos: Int64; var IOHnd: TIOHnd; var SenderField: TField): Boolean;                                   { inline token }
+function dbField_MoveHeader(const HeaderPOS: Int64; const SourcerFieldPOS, TargetFieldPos: Int64; var IOHnd: TIOHnd; var SenderField: TField): Boolean; { inline token }
 
-function dbField_CreateField(const Name: umlString; const fPos: Int64; var IOHnd: TIOHnd; var SenderField: TField): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_InsertNewField(const Name: umlString; const fieldPos, CurrentInsertPos: Int64; var IOHnd: TIOHnd; var SenderField: TField): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_CreateItem(const Name: umlString; const ExterID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderItem: TItem): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_InsertNewItem(const Name: umlString; const ExterID: Byte; const fieldPos, CurrentInsertPos: Int64; var IOHnd: TIOHnd; var SenderItem: TItem): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_CreateField(const Name: umlString; const fPos: Int64; var IOHnd: TIOHnd; var SenderField: TField): Boolean;                                            { inline token }
+function dbField_InsertNewField(const Name: umlString; const fieldPos, CurrentInsertPos: Int64; var IOHnd: TIOHnd; var SenderField: TField): Boolean;                   { inline token }
+function dbField_CreateItem(const Name: umlString; const ExterID: Byte; const fPos: Int64; var IOHnd: TIOHnd; var SenderItem: TItem): Boolean;                          { inline token }
+function dbField_InsertNewItem(const Name: umlString; const ExterID: Byte; const fieldPos, CurrentInsertPos: Int64; var IOHnd: TIOHnd; var SenderItem: TItem): Boolean; { inline token }
 
-function dbField_CopyItem(var SenderItem: TItem; var IOHnd: TIOHnd; const DestFieldPos: Int64; var DestRecFile: TIOHnd): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_CopyItemBuffer(var SenderItem: TItem; var IOHnd: TIOHnd; var DestItemHnd: TItem; var DestRecFile: TIOHnd): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbField_CopyAllTo(const FilterName: umlString; const fieldPos: Int64; var IOHnd: TIOHnd; const DestFieldPos: Int64; var DestRecFile: TIOHnd): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbField_CopyItem(var SenderItem: TItem; var IOHnd: TIOHnd; const DestFieldPos: Int64; var DestRecFile: TIOHnd): Boolean;                               { inline token }
+function dbField_CopyItemBuffer(var SenderItem: TItem; var IOHnd: TIOHnd; var DestItemHnd: TItem; var DestRecFile: TIOHnd): Boolean;                            { inline token }
+function dbField_CopyAllTo(const FilterName: umlString; const fieldPos: Int64; var IOHnd: TIOHnd; const DestFieldPos: Int64; var DestRecFile: TIOHnd): Boolean; { inline token }
 
-function dbPack_CreatePack(const Name, Description: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_OpenPack(const Name: umlString; var SenderTMDB: TTMDB; _OnlyRead: Boolean): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_CreatePack(const Name, Description: umlString; var SenderTMDB: TTMDB): Boolean;      { inline token }
+function dbPack_OpenPack(const Name: umlString; var SenderTMDB: TTMDB; _OnlyRead: Boolean): Boolean; { inline token }
 
-function dbPack_CreateAsStream(Stream: TMixedStream; const Name, Description: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_OpenAsStream(Stream: TMixedStream; const Name: umlString; var SenderTMDB: TTMDB; _OnlyRead: Boolean): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_CreateAsStream(Stream: TMixedStream; const Name, Description: umlString; var SenderTMDB: TTMDB): Boolean;      { inline token }
+function dbPack_OpenAsStream(Stream: TMixedStream; const Name: umlString; var SenderTMDB: TTMDB; _OnlyRead: Boolean): Boolean; { inline token }
 
-function dbPack_ClosePack(var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_ClosePack(var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_CopyFieldTo(const FilterName: umlString; var SenderTMDB: TTMDB; const SourceFieldPos: Int64; var DestTMDB: TTMDB; const DestFieldPos: Int64): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_CopyAllTo(var SenderTMDB: TTMDB; var DestTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_CopyAllToDestPath(var SenderTMDB: TTMDB; var DestTMDB: TTMDB; DestPath: umlString): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_CopyFieldTo(const FilterName: umlString; var SenderTMDB: TTMDB; const SourceFieldPos: Int64; var DestTMDB: TTMDB; const DestFieldPos: Int64): Boolean; { inline token }
+function dbPack_CopyAllTo(var SenderTMDB: TTMDB; var DestTMDB: TTMDB): Boolean;                                                                                        { inline token }
+function dbPack_CopyAllToDestPath(var SenderTMDB: TTMDB; var DestTMDB: TTMDB; DestPath: umlString): Boolean;                                                           { inline token }
 
-function dbPack_Update(var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_Update(var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_TestNameStr(const Name: umlString): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_TestNameStr(const Name: umlString): Boolean; { inline token }
 
-function dbPack_AutoCheckRootField(const Name: umlString; var SenderField: TField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_CreateRootHeader(const Name: umlString; const ID: Byte; var SenderTMDB: TTMDB; var SenderHeader: THeader): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_CreateRootField(const Name, Description: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_CreateAndSetRootField(const Name, Description: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_CreateField(const PathName, Description: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_AutoCheckRootField(const Name: umlString; var SenderField: TField; var SenderTMDB: TTMDB): Boolean;                 { inline token }
+function dbPack_CreateRootHeader(const Name: umlString; const ID: Byte; var SenderTMDB: TTMDB; var SenderHeader: THeader): Boolean; { inline token }
+function dbPack_CreateRootField(const Name, Description: umlString; var SenderTMDB: TTMDB): Boolean;                                { inline token }
+function dbPack_CreateAndSetRootField(const Name, Description: umlString; var SenderTMDB: TTMDB): Boolean;                          { inline token }
+function dbPack_CreateField(const PathName, Description: umlString; var SenderTMDB: TTMDB): Boolean;                                { inline token }
 
-function dbPack_SetFieldName(const PathName, OriginFieldName, NewFieldName, FieldDescription: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_SetItemName(const PathName, OriginItemName, NewItemName, ItemDescription: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_DeleteField(const PathName, FilterName: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_SetFieldName(const PathName, OriginFieldName, NewFieldName, FieldDescription: umlString; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_SetItemName(const PathName, OriginItemName, NewItemName, ItemDescription: umlString; var SenderTMDB: TTMDB): Boolean;     { inline token }
+function dbPack_DeleteField(const PathName, FilterName: umlString; var SenderTMDB: TTMDB): Boolean;                                       { inline token }
 
-function dbPack_DeleteHeader(const PathName, FilterName: umlString; const ID: Byte; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_DeleteHeader(const PathName, FilterName: umlString; const ID: Byte; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_MoveItem(const SourcerPathName, FilterName: umlString; const TargetPathName: umlString; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_MoveItem(const SourcerPathName, FilterName: umlString; const TargetPathName: umlString; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_MoveField(const SourcerPathName, FilterName: umlString; const TargetPathName: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_MoveField(const SourcerPathName, FilterName: umlString; const TargetPathName: umlString; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_MoveHeader(const SourcerPathName, FilterName: umlString; const TargetPathName: umlString; const HeaderID: Byte; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_MoveHeader(const SourcerPathName, FilterName: umlString; const TargetPathName: umlString; const HeaderID: Byte; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_SetCurrentRootField(const Name: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_SetCurrentField(const PathName: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_SetCurrentRootField(const Name: umlString; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_SetCurrentField(const PathName: umlString; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_GetRootField(const Name: umlString; var SenderField: TField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_GetField(const PathName: umlString; var SenderField: TField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_GetPath(const fieldPos, RootFieldPos: Int64; var SenderTMDB: TTMDB; var RetPath: umlString): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_GetRootField(const Name: umlString; var SenderField: TField; var SenderTMDB: TTMDB): Boolean;         { inline token }
+function dbPack_GetField(const PathName: umlString; var SenderField: TField; var SenderTMDB: TTMDB): Boolean;         { inline token }
+function dbPack_GetPath(const fieldPos, RootFieldPos: Int64; var SenderTMDB: TTMDB; var RetPath: umlString): Boolean; { inline token }
 
-function dbPack_NewItem(const PathName, ItemName, ItemDescription: umlString; const ItemExtID: Byte; var SenderItem: TItem; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_NewItem(const PathName, ItemName, ItemDescription: umlString; const ItemExtID: Byte; var SenderItem: TItem; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_DeleteItem(const PathName, FilterName: umlString; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_DeleteItem(const PathName, FilterName: umlString; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_GetItem(const PathName, ItemName: umlString; const ItemExtID: Byte; var SenderItem: TItem; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_GetItem(const PathName, ItemName: umlString; const ItemExtID: Byte; var SenderItem: TItem; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_ItemCreate(const PathName, ItemName, ItemDescription: umlString; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemFastCreate(const ItemName, ItemDescription: umlString; const fPos: Int64; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline;
-{$ENDIF}
-function dbPack_ItemFastInsertNew(const ItemName, ItemDescription: umlString; const fieldPos, InsertHeaderPos: Int64; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;
-{$IFDEF INLINE_ASM}inline; {$ENDIF}
-{$IFDEF INLINE_ASM}inline;
-{$ENDIF}
-function dbPack_ItemOpen(const PathName, ItemName: umlString; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemFastOpen(const fPos: Int64; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemClose(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemUpdate(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemBodyReset(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemReName(const fieldPos: Int64; const NewItemName, NewItemDescription: umlString; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_ItemCreate(const PathName, ItemName, ItemDescription: umlString; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                                      { inline token }
+function dbPack_ItemFastCreate(const ItemName, ItemDescription: umlString; const fPos: Int64; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                         { inline token }
+function dbPack_ItemFastInsertNew(const ItemName, ItemDescription: umlString; const fieldPos, InsertHeaderPos: Int64; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_ItemOpen(const PathName, ItemName: umlString; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                                                         { inline token }
+function dbPack_ItemFastOpen(const fPos: Int64; const ItemExtID: Byte; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                                                                       { inline token }
+function dbPack_ItemClose(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                                                                                                                    { inline token }
+function dbPack_ItemUpdate(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                                                                                                                   { inline token }
+function dbPack_ItemBodyReset(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                                                                                                                { inline token }
+function dbPack_ItemReName(const fieldPos: Int64; const NewItemName, NewItemDescription: umlString; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                                          { inline token }
 
-function dbPack_ItemRead(const Size: Int64; var Buffers; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemWrite(const Size: Int64; var Buffers; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemReadStr(var Name: umlString; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemWriteStr(const Name: umlString; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_ItemRead(const Size: Int64; var Buffers; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;  { inline token }
+function dbPack_ItemWrite(const Size: Int64; var Buffers; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_ItemReadStr(var Name: umlString; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;          { inline token }
+function dbPack_ItemWriteStr(const Name: umlString; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;       { inline token }
 
-function dbPack_ItemSeekPos(const fPos: Int64; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemSeekStartPos(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemSeekLastPos(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemGetPos(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Int64; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_ItemGetSize(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Int64; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_AppendItemSize(var SenderTMDBItemHandle: TTMDBItemHandle; const Size: Int64; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_ItemSeekPos(const fPos: Int64; var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;    { inline token }
+function dbPack_ItemSeekStartPos(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                  { inline token }
+function dbPack_ItemSeekLastPos(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Boolean;                   { inline token }
+function dbPack_ItemGetPos(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Int64;                          { inline token }
+function dbPack_ItemGetSize(var SenderTMDBItemHandle: TTMDBItemHandle; var SenderTMDB: TTMDB): Int64;                         { inline token }
+function dbPack_AppendItemSize(var SenderTMDBItemHandle: TTMDBItemHandle; const Size: Int64; var SenderTMDB: TTMDB): Boolean; { inline token }
 
-function dbPack_ExistsRootField(const Name: umlString; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindFirstHeader(const PathName, FilterName: umlString; const ID: Byte; var SenderSearch: TTMDBSearchHeader; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindNextHeader(var SenderSearch: TTMDBSearchHeader; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindLastHeader(const PathName, FilterName: umlString; const ID: Byte; var SenderSearch: TTMDBSearchHeader; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindPrevHeader(var SenderSearch: TTMDBSearchHeader; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_ExistsRootField(const Name: umlString; var SenderTMDB: TTMDB): Boolean;                                                                      { inline token }
+function dbPack_FindFirstHeader(const PathName, FilterName: umlString; const ID: Byte; var SenderSearch: TTMDBSearchHeader; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_FindNextHeader(var SenderSearch: TTMDBSearchHeader; var SenderTMDB: TTMDB): Boolean;                                                         { inline token }
+function dbPack_FindLastHeader(const PathName, FilterName: umlString; const ID: Byte; var SenderSearch: TTMDBSearchHeader; var SenderTMDB: TTMDB): Boolean;  { inline token }
+function dbPack_FindPrevHeader(var SenderSearch: TTMDBSearchHeader; var SenderTMDB: TTMDB): Boolean;                                                         { inline token }
 
-function dbPack_FindFirstItem(const PathName, FilterName: umlString; const ItemExtID: Byte; var SenderSearch: TTMDBSearchItem; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindNextItem(var SenderSearch: TTMDBSearchItem; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindLastItem(const PathName, FilterName: umlString; const ItemExtID: Byte; var SenderSearch: TTMDBSearchItem; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindPrevItem(var SenderSearch: TTMDBSearchItem; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_FindFirstItem(const PathName, FilterName: umlString; const ItemExtID: Byte; var SenderSearch: TTMDBSearchItem; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_FindNextItem(var SenderSearch: TTMDBSearchItem; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean;                                         { inline token }
+function dbPack_FindLastItem(const PathName, FilterName: umlString; const ItemExtID: Byte; var SenderSearch: TTMDBSearchItem; var SenderTMDB: TTMDB): Boolean;  { inline token }
+function dbPack_FindPrevItem(var SenderSearch: TTMDBSearchItem; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean;                                         { inline token }
 
-function dbPack_FastFindFirstItem(const fieldPos: Int64; const FilterName: umlString; const ItemExtID: Byte; var SenderSearch: TTMDBSearchItem; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FastFindNextItem(var SenderSearch: TTMDBSearchItem; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FastFindLastItem(const fieldPos: Int64; const FilterName: umlString; const ItemExtID: Byte; var SenderSearch: TTMDBSearchItem; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FastFindPrevItem(var SenderSearch: TTMDBSearchItem; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_FastFindFirstItem(const fieldPos: Int64; const FilterName: umlString; const ItemExtID: Byte; var SenderSearch: TTMDBSearchItem; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_FastFindNextItem(var SenderSearch: TTMDBSearchItem; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean;                                                      { inline token }
+function dbPack_FastFindLastItem(const fieldPos: Int64; const FilterName: umlString; const ItemExtID: Byte; var SenderSearch: TTMDBSearchItem; var SenderTMDB: TTMDB): Boolean;  { inline token }
+function dbPack_FastFindPrevItem(var SenderSearch: TTMDBSearchItem; const ItemExtID: Byte; var SenderTMDB: TTMDB): Boolean;                                                      { inline token }
 
-function dbPack_FindFirstField(const PathName, FilterName: umlString; var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindNextField(var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindLastField(const PathName, FilterName: umlString; var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FindPrevField(var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_FindFirstField(const PathName, FilterName: umlString; var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_FindNextField(var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean;                                         { inline token }
+function dbPack_FindLastField(const PathName, FilterName: umlString; var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean;  { inline token }
+function dbPack_FindPrevField(var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean;                                         { inline token }
 
-function dbPack_FastFindFirstField(const fieldPos: Int64; const FilterName: umlString; var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FastFindNextField(var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FastFindLastField(const fieldPos: Int64; const FilterName: umlString; var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_FastFindPrevField(var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_FastFindFirstField(const fieldPos: Int64; const FilterName: umlString; var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_FastFindNextField(var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean;                                                      { inline token }
+function dbPack_FastFindLastField(const fieldPos: Int64; const FilterName: umlString; var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean;  { inline token }
+function dbPack_FastFindPrevField(var SenderSearch: TTMDBSearchField; var SenderTMDB: TTMDB): Boolean;                                                      { inline token }
 
-function dbPack_RecursionSearchFirst(const InitPath, FilterName: umlString; var SenderRecursionSearch: TTMDBRecursionSearch; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-function dbPack_RecursionSearchNext(var SenderRecursionSearch: TTMDBRecursionSearch; var SenderTMDB: TTMDB): Boolean; {$IFDEF INLINE_ASM}inline; {$ENDIF}
-
+function dbPack_RecursionSearchFirst(const InitPath, FilterName: umlString; var SenderRecursionSearch: TTMDBRecursionSearch; var SenderTMDB: TTMDB): Boolean; { inline token }
+function dbPack_RecursionSearchNext(var SenderRecursionSearch: TTMDBRecursionSearch; var SenderTMDB: TTMDB): Boolean;                                         { inline token }
 
 const
   { return code }
@@ -541,27 +536,27 @@ implementation
 
 uses PascalStrings;
 
-function dbPack_GetIndexStrCount(const StrName: umlString): Integer; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_GetPathCount(const StrName: umlString): Integer; inline;
 begin
   Result := umlGetIndexStrCount(StrName, db_FieldPathLimitChar);
 end;
 
-function dbPack_MaskFirstPath(const PathName: umlString): umlString; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_DeleteFirstPath(const PathName: umlString): umlString; inline;
 begin
   Result := umlDeleteFirstStr(PathName, db_FieldPathLimitChar).Text;
 end;
 
-function dbPack_MaskLastPath(const PathName: umlString): umlString; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_DeleteLastPath(const PathName: umlString): umlString; inline;
 begin
   Result := umlDeleteLastStr(PathName, db_FieldPathLimitChar).Text;
 end;
 
-function dbPack_GetFirstPath(const PathName: umlString): umlString; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_GetFirstPath(const PathName: umlString): umlString; inline;
 begin
   Result := umlGetFirstStr(PathName, db_FieldPathLimitChar).Text;
 end;
 
-function dbPack_GetLastPath(const PathName: umlString): umlString; {$IFDEF INLINE_ASM}inline; {$ENDIF}
+function dbPack_GetLastPath(const PathName: umlString): umlString; inline;
 begin
   Result := umlGetLastStr(PathName, db_FieldPathLimitChar).Text;
 end;
@@ -579,6 +574,7 @@ begin
   SenderHeader.UserProperty := 0;
   SenderHeader.Name := '';
   SenderHeader.Return := db_Header_ok;
+  SenderHeader.MemorySiz := 0;
 end;
 
 procedure Init_TItemBlock(var SenderItemBlock: TItemBlock);
@@ -590,6 +586,7 @@ begin
   SenderItemBlock.DataBlockPOS := 0;
   SenderItemBlock.Size := 0;
   SenderItemBlock.Return := db_Item_ok;
+  SenderItemBlock.MemorySiz := 0;
 end;
 
 procedure Init_TItem(var SenderItem: TItem);
@@ -606,6 +603,7 @@ begin
   Init_TItemBlock(SenderItem.CurrentItemBlock);
   SenderItem.DataWrited := False;
   SenderItem.Return := db_Item_ok;
+  SenderItem.MemorySiz := 0;
 end;
 
 procedure Init_TField(var SenderField: TField);
@@ -617,6 +615,7 @@ begin
   SenderField.LastHeaderPOS := 0;
   Init_THeader(SenderField.RHeader);
   SenderField.Return := db_Field_ok;
+  SenderField.MemorySiz := 0;
 end;
 
 procedure Init_TFieldSearch(var SenderFieldSearch: TFieldSearch);
@@ -647,7 +646,6 @@ begin
   InitIOHnd(SenderTMDB.IOHnd);
   SenderTMDB.IOHnd.Data := @SenderTMDB;
   SenderTMDB.OverWriteItem := True;
-  SenderTMDB.WriteFlags := False;
   SenderTMDB.AllowSameHeaderName := False;
 
   SenderTMDB.OnWriteHeader := nil;
@@ -664,6 +662,7 @@ begin
   SenderTMDB.OnOnlyReadFieldRec := nil;
 
   SenderTMDB.Return := db_Pack_ok;
+  SenderTMDB.MemorySiz := 0;
 end;
 
 procedure Init_TTMDBItemHandle(var SenderTMDBItemHandle: TTMDBItemHandle);
@@ -4149,7 +4148,6 @@ begin
   SenderTMDB.LastHeaderPOS := SenderTMDB.DefaultFieldPOS;
   SenderTMDB.FirstHeaderPOS := SenderTMDB.DefaultFieldPOS;
   SenderTMDB.CurrentFieldPOS := SenderTMDB.DefaultFieldPOS;
-  SenderTMDB.WriteFlags := True;
   if dbPack_WriteRec(0, SenderTMDB.IOHnd, SenderTMDB) = False then
     begin
       Result := False;
@@ -4186,7 +4184,6 @@ begin
       Exit;
     end;
 
-  SenderTMDB.WriteFlags := False;
   SenderTMDB.Return := db_Pack_ok;
   Result := True;
 end;
@@ -4214,7 +4211,6 @@ begin
   SenderTMDB.LastHeaderPOS := SenderTMDB.DefaultFieldPOS;
   SenderTMDB.FirstHeaderPOS := SenderTMDB.DefaultFieldPOS;
   SenderTMDB.CurrentFieldPOS := SenderTMDB.DefaultFieldPOS;
-  SenderTMDB.WriteFlags := True;
   if dbPack_WriteRec(0, SenderTMDB.IOHnd, SenderTMDB) = False then
     begin
       Result := False;
@@ -4251,7 +4247,6 @@ begin
       Exit;
     end;
 
-  SenderTMDB.WriteFlags := False;
   SenderTMDB.Return := db_Pack_ok;
   Result := True;
 end;
@@ -4264,7 +4259,7 @@ begin
       Result := False;
       Exit;
     end;
-  if SenderTMDB.WriteFlags then
+  if SenderTMDB.IOHnd.WriteFlag then
     begin
       SenderTMDB.LastModifyTime := umlDefaultTime;
       if dbPack_WriteRec(0, SenderTMDB.IOHnd, SenderTMDB) = False then
@@ -4272,7 +4267,6 @@ begin
           Result := False;
           Exit;
         end;
-      SenderTMDB.WriteFlags := False;
     end;
   if umlFileClose(SenderTMDB.IOHnd) = False then
     begin
@@ -4292,7 +4286,7 @@ begin
       Result := False;
       Exit;
     end;
-  if SenderTMDB.WriteFlags then
+  if SenderTMDB.IOHnd.WriteFlag then
     begin
       SenderTMDB.LastModifyTime := umlDefaultTime;
       if dbPack_WriteRec(0, SenderTMDB.IOHnd, SenderTMDB) = False then
@@ -4300,10 +4294,9 @@ begin
           Result := False;
           Exit;
         end;
-      SenderTMDB.WriteFlags := False;
     end;
   SenderTMDB.Return := db_Pack_ok;
-  Result := True;
+  Result := umlFileUpdate(SenderTMDB.IOHnd);
 end;
 
 function dbPack_CopyFieldTo(const FilterName: umlString; var SenderTMDB: TTMDB; const SourceFieldPos: Int64; var DestTMDB: TTMDB; const DestFieldPos: Int64): Boolean;
@@ -4341,7 +4334,7 @@ end;
 
 function dbPack_TestNameStr(const Name: umlString): Boolean;
 begin
-  Result := umlGetLength(umlDelLimitChar(name, db_FieldPathLimitChar + #9#32#13#10)) > 0;
+  Result := umlDeleteChar(name, TPascalString(db_FieldPathLimitChar + #9#32#13#10)).len > 0;
 end;
 
 function dbPack_AutoCheckRootField(const Name: umlString; var SenderField: TField; var SenderTMDB: TTMDB): Boolean;
@@ -4489,8 +4482,6 @@ begin
       end;
   end;
 
-  if SenderTMDB.WriteFlags = False then
-      SenderTMDB.WriteFlags := True;
   SenderHeader.Return := db_Header_ok;
   Result := True;
 end;
@@ -4595,13 +4586,13 @@ begin
       Exit;
     end;
   TempPathName := PathName;
-  pc := dbPack_GetIndexStrCount(TempPathName);
+  pc := dbPack_GetPathCount(TempPathName);
   if pc > 0 then
     begin
       for i := 1 to pc do
         begin
           TempPathStr := dbPack_GetFirstPath(TempPathName);
-          TempPathName := dbPack_MaskFirstPath(TempPathName);
+          TempPathName := dbPack_DeleteFirstPath(TempPathName);
 
           if dbPack_TestNameStr(TempPathStr) = False then
             begin
@@ -4632,7 +4623,6 @@ begin
           end;
         end;
     end;
-  SenderTMDB.WriteFlags := True;
   SenderTMDB.Return := db_Pack_ok;
   Result := True;
 end;
@@ -5055,13 +5045,13 @@ begin
       Exit;
     end;
   TempPathName := PathName;
-  pc := dbPack_GetIndexStrCount(TempPathName);
+  pc := dbPack_GetPathCount(TempPathName);
   if pc > 0 then
     begin
       for i := 1 to pc do
         begin
           TempPathStr := dbPack_GetFirstPath(TempPathName);
-          TempPathName := dbPack_MaskFirstPath(TempPathName);
+          TempPathName := dbPack_DeleteFirstPath(TempPathName);
 
           if dbPack_TestNameStr(TempPathStr) = False then
             begin
@@ -5085,7 +5075,6 @@ begin
     end;
   SenderTMDB.CurrentFieldPOS := f.RHeader.CurrentHeader;
   SenderTMDB.CurrentFieldLevel := pc;
-  SenderTMDB.WriteFlags := True;
   SenderTMDB.Return := db_Pack_ok;
   Result := True;
 end;
@@ -5193,14 +5182,14 @@ begin
       Exit;
     end;
   TempPathName := PathName;
-  pc := dbPack_GetIndexStrCount(TempPathName);
+  pc := dbPack_GetPathCount(TempPathName);
 
   if pc > 0 then
     begin
       for i := 1 to pc do
         begin
           TempPathStr := dbPack_GetFirstPath(TempPathName);
-          TempPathName := dbPack_MaskFirstPath(TempPathName);
+          TempPathName := dbPack_DeleteFirstPath(TempPathName);
 
           if dbPack_TestNameStr(TempPathStr) = False then
             begin
@@ -5299,13 +5288,13 @@ begin
   if umlGetLength(PathName) > 0 then
     begin
       TempPathName := PathName;
-      pc := dbPack_GetIndexStrCount(TempPathName);
+      pc := dbPack_GetPathCount(TempPathName);
       if pc > 0 then
         begin
           for i := 1 to pc do
             begin
               TempPathStr := dbPack_GetFirstPath(TempPathName);
-              TempPathName := dbPack_MaskFirstPath(TempPathName);
+              TempPathName := dbPack_DeleteFirstPath(TempPathName);
 
               if dbPack_TestNameStr(TempPathStr) = False then
                 begin
@@ -5372,7 +5361,6 @@ begin
       Result := False;
       Exit;
     end;
-  SenderTMDB.WriteFlags := True;
   SenderTMDB.Return := db_Pack_ok;
   Result := True;
 end;
@@ -5408,7 +5396,6 @@ begin
           Exit;
         end;
     end;
-  SenderTMDB.WriteFlags := True;
   SenderTMDB.Return := db_Pack_ok;
   Result := True;
 end;
@@ -5435,7 +5422,6 @@ begin
       Result := False;
       Exit;
     end;
-  SenderTMDB.WriteFlags := True;
   SenderTMDB.Return := db_Pack_ok;
   Result := True;
 end;

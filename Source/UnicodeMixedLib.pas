@@ -1,16 +1,18 @@
 { ****************************************************************************** }
 { * MixedLibrary,writen by QQ 600585@qq.com                                    * }
 { * https://github.com/PassByYou888/CoreCipher                                 * }
-(* https://github.com/PassByYou888/ZServer4D *)
-{ ***************************************************************************** }
-
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
 { ****************************************************************************** }
-{ ***************************************************************
+
+{
   *
   * Unit Name: MixedLibrary
   * Purpose  : mixed Low Level Function Library
   *
-  **************************************************************** }
+}
 
 (*
   update history
@@ -23,13 +25,13 @@ unit UnicodeMixedLib;
 
 interface
 
-uses SysUtils, Types, Variants,
+uses SysUtils, Classes, Types, Variants,
   PascalStrings,
   CoreClasses;
 
 const
-  umlAddressLength = SizeOf(Pointer);
-
+  umlAddressLength  = SizeOf(Pointer);
+  umlPointerLength  = umlAddressLength;
   umlIntegerLength  = 4;
   umlInt64Length    = 8;
   umlUInt64Length   = 8;
@@ -71,9 +73,9 @@ const
 type
   umlSystemString   = SystemString;
   umlString         = TPascalString;
-  umlPString        = ^umlString;
+  umlPString        = PPascalString;
   umlChar           = SystemChar;
-  umlStringDynArray = array of string;
+  umlStringDynArray = array of SystemString;
 
   umlBytes = TBytes;
 
@@ -81,7 +83,7 @@ type
 
   TMixedStream = TCoreClassStream;
 
-  TIOHnd = record
+  TIOHnd = packed record
     IsOnlyRead: Boolean;
     OpenFlags: Boolean;
     AutoFree: Boolean;
@@ -94,12 +96,14 @@ type
     FlushBuff: TMixedStream;
     PrepareReadPosition: Int64;
     PrepareReadBuff: TMixedStream;
+    IORead, IOWrite: Int64;
+    WriteFlag: Boolean;
     Data: Pointer;
     Return: Integer;
   end;
 
-  umlArraySystemString = array of string;
-  umlArrayString       = array of umlString;
+  umlArraySystemString = array of SystemString;
+  umlArrayString       = TArrayPascalString;
   pumlArrayString      = ^umlArrayString;
 
   FixedLengthString = packed record
@@ -107,21 +111,49 @@ type
     Data: packed array [0 .. FixedLengthStringSize] of Byte;
   end;
 
-function umlBytesOf(S: umlString): TBytes; inline;
-function umlStringOf(S: TBytes): umlString; overload; inline;
+function umlBytesOf(S: umlString): TBytes; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlStringOf(S: TBytes): umlString; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function FixedLengthString2Pascal(var S: FixedLengthString): TPascalString; inline;
-function Pascal2FixedLengthString(var S: TPascalString): FixedLengthString; inline;
+function FixedLengthString2Pascal(var S: FixedLengthString): TPascalString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function Pascal2FixedLengthString(var S: TPascalString): FixedLengthString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
 function umlComparePosStr(const S: umlString; Offset: Integer; t: umlString): Boolean;
 function umlPos(SubStr, Str: umlString; const Offset: Integer = 1): Integer;
+
+function umlVarToStr(V: Variant): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlStrToVar(S: umlString): Variant; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+
+function umlMax(v1, v2: UInt64): UInt64; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: Cardinal): Cardinal; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: Word): Word; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: Byte): Byte; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: Int64): Int64; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: Integer): Integer; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: SmallInt): SmallInt; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: ShortInt): ShortInt; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: Double): Double; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMax(v1, v2: Single): Single; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+
+function umlMin(v1, v2: UInt64): UInt64; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: Cardinal): Cardinal; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: Word): Word; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: Byte): Byte; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: Int64): Int64; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: Integer): Integer; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: SmallInt): SmallInt; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: ShortInt): ShortInt; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: Double): Double; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMin(v1, v2: Single): Single; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+
+function umlDeltaNumber(V, delta: NativeInt): NativeInt; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlGetResourceStream(const FileName: umlString): TStream;
 
 function umlSameVarValue(const v1, v2: Variant): Boolean;
 
 function umlRandomRange(aMin, aMax: Integer): Integer;
 function umlRandomRangeF(aMin, aMax: Single): Single;
 function umlRandomRangeD(aMin, aMax: Double): Double;
-function umlDefaultTime: Double; inline;
+function umlDefaultTime: Double; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 function umlDefaultAttrib: Integer;
 function umlBoolToStr(Value: Boolean): umlString;
 function umlStrToBool(Value: umlString): Boolean;
@@ -138,8 +170,8 @@ function umlFindFirstDir(DirName: umlString; var SR: TSR): Boolean;
 function umlFindNextDir(var SR: TSR): Boolean;
 procedure umlFindClose(var SR: TSR);
 
-function umlGetFileList(FullPath: umlString; _AsList: TCoreClassStrings): Integer;
-function umlGetDirList(FullPath: umlString; _AsList: TCoreClassStrings): Integer;
+function umlGetFileList(FullPath: umlString; AsLst: TCoreClassStrings): Integer;
+function umlGetDirList(FullPath: umlString; AsLst: TCoreClassStrings): Integer;
 
 function umlGetFileListWithFullPath(FullPath: umlString): umlStringDynArray;
 function umlGetDirListWithFullPath(FullPath: umlString): umlStringDynArray;
@@ -151,28 +183,29 @@ function umlGetFilePath(S: umlString): umlString;
 function umlChangeFileExt(S, ext: umlString): umlString;
 function umlGetFileExt(S: umlString): umlString;
 
-procedure InitIOHnd(var IOHnd: TIOHnd); inline;
-function umlFileCreateAsStream(Name: umlString; Stream: TMixedStream; var IOHnd: TIOHnd): Boolean; inline;
-function umlFileOpenAsStream(Name: umlString; Stream: TMixedStream; var IOHnd: TIOHnd; _OnlyRead: Boolean): Boolean; inline;
-function umlFileCreate(Name: umlString; var IOHnd: TIOHnd): Boolean; inline;
-function umlFileOpen(Name: umlString; var IOHnd: TIOHnd; _OnlyRead: Boolean): Boolean; inline;
-function umlFileClose(var IOHnd: TIOHnd): Boolean; inline;
-function umlFileTest(var IOHnd: TIOHnd): Boolean; inline;
+procedure InitIOHnd(var IOHnd: TIOHnd); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileCreateAsStream(Name: umlString; Stream: TMixedStream; var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileOpenAsStream(Name: umlString; Stream: TMixedStream; var IOHnd: TIOHnd; _OnlyRead: Boolean): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileCreate(Name: umlString; var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileOpen(Name: umlString; var IOHnd: TIOHnd; _OnlyRead: Boolean): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileClose(var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileUpdate(var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileTest(var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-procedure umlResetPrepareRead(var IOHnd: TIOHnd); inline;
-function umlFilePrepareRead(var IOHnd: TIOHnd; Size: Int64; var Buffers): Boolean; inline;
-function umlFileRead(var IOHnd: TIOHnd; Size: Int64; var Buffers): Boolean; inline;
+procedure umlResetPrepareRead(var IOHnd: TIOHnd); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFilePrepareRead(var IOHnd: TIOHnd; Size: Int64; var Buffers): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileRead(var IOHnd: TIOHnd; Size: Int64; var Buffers): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function umlFileBeginWrite(var IOHnd: TIOHnd): Boolean; inline;
-function umlFileEndWrite(var IOHnd: TIOHnd): Boolean; inline;
-function umlFileWrite(var IOHnd: TIOHnd; Size: Int64; var Buffers): Boolean; inline;
+function umlFileBeginWrite(var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileEndWrite(var IOHnd: TIOHnd): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileWrite(var IOHnd: TIOHnd; const Size: Int64; var Buffers): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function umlFileWriteStr(var IOHnd: TIOHnd; var Value: umlString): Boolean; inline;
-function umlFileReadStr(var IOHnd: TIOHnd; var Value: umlString): Boolean; inline;
+function umlFileWriteStr(var IOHnd: TIOHnd; var Value: umlString): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileReadStr(var IOHnd: TIOHnd; var Value: umlString): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function umlFileSeek(var IOHnd: TIOHnd; APos: Int64): Boolean; inline;
-function umlFileGetPOS(var IOHnd: TIOHnd): Int64; inline;
-function umlFileGetSize(var IOHnd: TIOHnd): Int64; inline;
+function umlFileSeek(var IOHnd: TIOHnd; APos: Int64): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileGetPOS(var IOHnd: TIOHnd): Int64; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlFileGetSize(var IOHnd: TIOHnd): Int64; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
 function umlGetFileTime(FileName: umlString): TDateTime;
 procedure umlSetFileTime(FileName: umlString; newTime: TDateTime);
@@ -186,58 +219,56 @@ function umlCopyFile(SourFile, DestFile: umlString): Boolean;
 function umlRenameFile(OldName, NewName: umlString): Boolean;
 
 { umlString }
-procedure umlSetLength(var aStr: umlString; NewStrLength: Integer); overload;
-procedure umlSetLength(var aStr: umlBytes; NewStrLength: Integer); overload;
-procedure umlSetLength(var aStr: umlArrayString; NewStrLength: Integer); overload;
+procedure umlSetLength(var aStr: umlString; len: Integer); overload;
+procedure umlSetLength(var aStr: umlBytes; len: Integer); overload;
+procedure umlSetLength(var aStr: umlArrayString; len: Integer); overload;
 
 function umlGetLength(aStr: umlString): Integer; overload;
 function umlGetLength(var aStr: umlBytes): Integer; overload;
 function umlGetLength(aStr: umlArrayString): Integer; overload;
 
-function umlUpperCase(Str: umlString): umlString; inline;
-function umlLowerCase(Str: umlString): umlString; inline;
-function umlCopyStr(aStr: umlString; MainPosition, LastPosition: Integer): umlString; inline;
-function umlSameText(s1, s2: umlString): Boolean; inline;
+function umlUpperCase(Str: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlLowerCase(Str: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlCopyStr(var aStr: umlString; MainPosition, LastPosition: Integer): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlSameText(s1, s2: umlString): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
 function umlGetStrIndexPos(IgnoreCase: Boolean; StartIndex: Integer; Str, SubStr: umlString): Integer;
-function umlDeleteChar(_Text, _Char: umlString): umlString; overload;
-function umlDeleteChar(_Text: umlString; const SomeCharsets: TOrdChars): umlString; overload;
+function umlDeleteChar(SText, ch: umlString): umlString; overload;
+function umlDeleteChar(SText: umlString; const SomeChars: array of SystemChar): umlString; overload;
+function umlDeleteChar(SText: umlString; const SomeCharsets: TOrdChars): umlString; overload;
 function umlGetNumberCharInText(n: umlString): umlString;
 
-function umlGetLimitCharPos(CharValue: umlChar; LimitValue: umlString): Integer; inline;
-function umlMatchLimitChar(CharValue: umlChar; LimitValue: umlPString): Boolean; overload; inline;
-function umlMatchLimitChar(CharValue: umlChar; LimitValue: umlString): Boolean; overload; inline;
-function umlExistsLimitChar(StrValue: umlString; LimitValue: umlString): Boolean; inline;
-function umlExistsChar(StrValue: umlString; LimitValue: umlString): Boolean; inline;
-function umlDelLimitChar(StrValue: umlString; LimitValue: umlString): umlString; inline;
-function umlGetLimitCharCount(StrValue: umlString; LimitValue: umlString): Integer; inline;
-function umlTrimChar(S: umlString; SpaceStr: umlString): umlString; inline;
+function umlMatchLimitChar(CharValue: umlChar; LimitValue: umlPString): Boolean; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMatchLimitChar(CharValue: umlChar; LimitValue: umlString): Boolean; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlExistsLimitChar(StrValue: umlString; LimitValue: umlString): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlExistsChar(StrValue: umlString; LimitValue: umlString): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function umlGetFirstStr(aStr: umlString; SpaceStr: umlString): umlString; inline;
-function umlGetLastStr(aStr: umlString; SpaceStr: umlString): umlString; inline;
-function umlDeleteFirstStr(aStr: umlString; SpaceStr: umlString): umlString; inline;
-function umlDeleteLastStr(aStr: umlString; SpaceStr: umlString): umlString; inline;
-function umlGetIndexStrCount(aStr: umlString; SpaceStr: umlString): Integer; inline;
-function umlGetIndexStr(aStr: umlString; SpaceStr: umlString; Index: Integer): umlString; inline;
+function umlTrimChar(S: umlString; limitS: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-procedure umlGetSplitArray(_SourText: umlString; var _DestArray: umlArrayString; _SplitChar: umlString); inline;
-function umlArrayStringToText(var _Ary: umlArrayString; _SplitChar: umlString): umlString; inline;
-function umlStringsToText(_List: TCoreClassStrings; _SplitChar: umlString): umlString; inline;
+function umlGetFirstStr(aStr: umlString; limitS: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlGetLastStr(aStr: umlString; limitS: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlDeleteFirstStr(aStr: umlString; limitS: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlDeleteLastStr(aStr: umlString; limitS: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlGetIndexStrCount(aStr: umlString; limitS: umlString): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlGetIndexStr(aStr: umlString; limitS: umlString; Index: Integer): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function umlGetFirstStr_M(aStr: umlString; SpaceStr: umlString): umlString;
-function umlDeleteFirstStr_M(aStr: umlString; SpaceStr: umlString): umlString;
-function umlGetLastStr_M(aStr: umlString; SpaceStr: umlString): umlString;
-function umlDeleteLastStr_M(aStr: umlString; SpaceStr: umlString): umlString;
-function umlGetIndexStrCount_M(aStr: umlString; SpaceStr: umlString): Integer;
-function umlGetIndexStr_M(aStr: umlString; SpaceStr: umlString; Index: Integer): umlString;
+procedure umlGetSplitArray(_SourText: umlString; var _DestArray: umlArrayString; _SplitChar: umlString); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlArrayStringToText(var _Ary: umlArrayString; _SplitChar: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlStringsToText(_List: TCoreClassStrings; _SplitChar: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function umlGetFirstTextPos(S: umlString; ATextList: array of umlString; var OutText: umlString): Integer;
-function umlDeleteText(ASourText: umlString; ABeginFlag, AEndFlag: array of umlString; ANeedBegin, ANeedEnd: Boolean): umlString;
-function umlGetTextContent(ASourText: umlString; ABeginFlag, AEndFlag: array of umlString): umlString;
+function umlGetFirstStr_M(aStr: umlString; limitS: umlString): umlString;
+function umlDeleteFirstStr_M(aStr: umlString; limitS: umlString): umlString;
+function umlGetLastStr_M(aStr: umlString; limitS: umlString): umlString;
+function umlDeleteLastStr_M(aStr: umlString; limitS: umlString): umlString;
+function umlGetIndexStrCount_M(aStr: umlString; limitS: umlString): Integer;
+function umlGetIndexStr_M(aStr: umlString; limitS: umlString; Index: Integer): umlString;
+
+function umlGetFirstTextPos(S: umlString; TextArry: array of umlString; var OutText: umlString): Integer;
+function umlDeleteText(Sour: umlString; bToken, eToken: array of umlString; ANeedBegin, ANeedEnd: Boolean): umlString;
+function umlGetTextContent(Sour: umlString; bToken, eToken: array of umlString): umlString;
 
 type
-  TTextType = (ntBool, ntInt, ntInt64, ntUInt64, ntWord, ntByte, ntSmallInt, ntShortInt, ntUInt,
-    ntSingle, ntDouble, ntCurrency, ntUnknow);
+  TTextType  = (ntBool, ntInt, ntInt64, ntUInt64, ntWord, ntByte, ntSmallInt, ntShortInt, ntUInt, ntSingle, ntDouble, ntCurrency, ntUnknow);
   TTextTypes = set of TTextType;
 function umlGetNumTextType(S: umlString): TTextType;
 
@@ -264,12 +295,12 @@ function umlStrToInt(_V: umlString; _Def: Integer): Integer; overload;
 function umlStrToInt(_V: umlString; _Def: Double): Integer; overload;
 function umlStrToFloat(_V: umlString; _Def: Double): Double; overload;
 
-function umlMultipleMatch(IgnoreCase: Boolean; SourceStr, TargetStr, umlMultipleString, umlMultipleCharacter: umlString): Boolean; overload; inline;
-function umlMultipleMatch(IgnoreCase: Boolean; SourceStr, TargetStr: umlString): Boolean; overload; inline;
-function umlMultipleMatch(const SourceStr, TargetStr: umlString): Boolean; overload; inline;
-function umlMultipleMatch(const ValueCheck: umlArrayString; Value: umlString): Boolean; overload; inline;
-function umlSearchMatch(const SourceStr, TargetStr: umlString): Boolean; overload; inline;
-function umlSearchMatch(ValueCheck: umlArrayString; Value: umlString): Boolean; overload; inline;
+function umlMultipleMatch(IgnoreCase: Boolean; SourceStr, TargetStr, umlMultipleString, umlMultipleCharacter: umlString): Boolean; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMultipleMatch(IgnoreCase: Boolean; SourceStr, TargetStr: umlString): Boolean; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMultipleMatch(const SourceStr, TargetStr: umlString): Boolean; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlMultipleMatch(const ValueCheck: umlArrayString; Value: umlString): Boolean; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlSearchMatch(const SourceStr, TargetStr: umlString): Boolean; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlSearchMatch(ValueCheck: umlArrayString; Value: umlString): Boolean; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
 { De Time Double Code }
 function umlDeTimeCodeToStr(NowDateTime: TDateTime): umlString;
@@ -279,7 +310,9 @@ function umlDeTimeCodeToStr(NowDateTime: TDateTime): umlString;
 function umlStringReplace(S, OldPattern, NewPattern: umlString; IgnoreCase: Boolean): umlString;
 function umlCharReplace(S: umlString; OldPattern, NewPattern: umlChar): umlString;
 
-function umlEncodeText2HTML(psSrc: umlString): umlString;
+function umlEncodeText2HTML(psSrc: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+
+function umlURLEncode(const AValue: umlString): umlString;
 
 procedure umlBase64EncodeBytes(var Sour, Dest: TBytes); overload;
 procedure umlBase64EncodeBytes(var Sour: TBytes; var Dest: umlString); overload;
@@ -300,7 +333,7 @@ type
 const
   NullMD5: TMD5 = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-function umlMD5(const BuffPtr: PBYTE; const BuffSize: NativeUInt): TMD5;
+function umlMD5(const BuffPtr: PBYTE; BufSiz: NativeUInt): TMD5;
 function umlMD5Char(const BuffPtr: PBYTE; const BuffSize: NativeUInt): umlString;
 function umlMD5String(const BuffPtr: PBYTE; const BuffSize: NativeUInt): umlString;
 function umlStreamMD5(Stream: TCoreClassStream; StartPos, EndPos: Int64): TMD5; overload;
@@ -311,8 +344,11 @@ function umlStringMD5(const Value: umlString): TMD5; overload;
 function umlStringMD5Char(const Value: umlString): umlString; overload;
 function umlMD52Str(md5: TMD5): umlString;
 function umlMD52String(md5: TMD5): umlString;
-function umlMD5Compare(const m1, m2: TMD5): Boolean; inline;
-function umlCompareMD5(const m1, m2: TMD5): Boolean; inline;
+function umlMD5Compare(const m1, m2: TMD5): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlCompareMD5(const m1, m2: TMD5): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlIsNullMD5(m: TMD5): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlWasNullMD5(m: TMD5): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+
 
 const
   CRC16Table: array [0 .. 255] of Word = (
@@ -342,10 +378,11 @@ const
     $81C1, $8081, $4040
     );
 
-function umlCRC16(const Value: PBYTE; const Count: NativeUInt): Word; inline;
-function umlStringCRC16(const Value: umlString): Word; inline;
-function umlStreamCRC16(Stream: TMixedStream; StartPos, EndPos: Int64): Word; overload; inline;
-function umlStreamCRC16(Stream: TMixedStream): Word; overload; inline;
+function umlCRC16(const Value: PBYTE; const Count: NativeUInt): Word; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlStringCRC16(const Value: umlString): Word; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlStreamCRC16(Stream: TMixedStream; StartPos, EndPos: Int64): Word; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlStreamCRC16(Stream: TMixedStream): Word; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+
 
 const
   CRC32Table: array [0 .. 255] of Cardinal = (
@@ -388,10 +425,11 @@ const
     $B40BBE37, $C30C8EA1, $5A05DF1B, $2D02EF8D
     );
 
-function umlCRC32(const Value: PBYTE; const Count: NativeUInt): Cardinal; inline;
-function umlString2CRC32(const Value: umlString): Cardinal; inline;
-function umlStreamCRC32(Stream: TMixedStream; StartPos, EndPos: Int64): Cardinal; overload; inline;
-function umlStreamCRC32(Stream: TMixedStream): Cardinal; overload; inline;
+function umlCRC32(const Value: PBYTE; const Count: NativeUInt): Cardinal; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlString2CRC32(const Value: umlString): Cardinal; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlStreamCRC32(Stream: TMixedStream; StartPos, EndPos: Int64): Cardinal; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function umlStreamCRC32(Stream: TMixedStream): Cardinal; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+
 
 type
   TDESKey = array [0 .. 7] of Byte;
@@ -406,32 +444,32 @@ procedure umlDES(DataPtr: Pointer; Size: Cardinal; const Key: TDESKey; Encrypt: 
 procedure umlDES(DataPtr: Pointer; Size: Cardinal; const Key: umlString; Encrypt: Boolean); overload;
 procedure umlDES(Input, Output: TMixedStream; const Key: TDESKey; Encrypt: Boolean); overload;
 procedure umlDES(Input, Output: TMixedStream; const Key: umlString; Encrypt: Boolean); overload;
-function umlDESCompare(const d1, d2: TDESKey): Boolean; inline;
+function umlDESCompare(const d1, d2: TDESKey): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-procedure umlFastSymbol(DataPtr: Pointer; Size: Cardinal; const Key: TDESKey; Encrypt: Boolean); overload; inline;
-procedure umlFastSymbol(DataPtr: Pointer; Size: Cardinal; const Key: umlString; Encrypt: Boolean); overload; inline;
+procedure umlFastSymbol(DataPtr: Pointer; Size: Cardinal; const Key: TDESKey; Encrypt: Boolean); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+procedure umlFastSymbol(DataPtr: Pointer; Size: Cardinal; const Key: umlString; Encrypt: Boolean); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function umlTrimSpace(S: umlString): umlString;
+function umlTrimSpace(S: umlString): umlString; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
 function umlSeparatorText(AText: umlString; Dest: TCoreClassStrings; SeparatorChar: umlString): Integer;
 function umlStringsMatchText(OriginValue: TCoreClassStrings; DestValue: umlString; IgnoreCase: Boolean = True): Boolean;
 
-function umlStringsInExists(Dest: TCoreClassStrings; _Text: umlString; IgnoreCase: Boolean = True): Boolean;
-function umlTextInStrings(_Text: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Boolean;
+function umlStringsInExists(Dest: TCoreClassStrings; SText: umlString; IgnoreCase: Boolean = True): Boolean;
+function umlTextInStrings(SText: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Boolean;
 
 function umlAddNewStrTo(SourceStr: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Boolean;
-function umlDeleteStrings(_Text: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
-function umlDeleteStringsNot(_Text: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
+function umlDeleteStrings(SText: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
+function umlDeleteStringsNot(SText: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
 function umlMergeStrings(Source, Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
 
 function umlConverStrToFileName(Value: umlString): umlString;
 
-function umlLimitTextMatch(_Text, _Limit, _MatchText: umlString; _IgnoreCase: Boolean): Boolean;
-function umlLimitTextTrimSpaceMatch(_Text, _Limit, _MatchText: umlString; _IgnoreCase: Boolean): Boolean;
-function umlLimitDeleteText(_Text, _Limit, _MatchText: umlString; _IgnoreCase: Boolean): umlString;
-function umlLimitTextAsList(_Text, _Limit: umlString; _AsList: TCoreClassStrings): Boolean;
-function umlLimitTextAsListAndTrimSpace(_Text, _Limit: umlString; _AsList: TCoreClassStrings): Boolean;
-function umlListAsLimitText(_List: TCoreClassStrings; _Limit: umlString): umlString;
+function umlLimitTextMatch(SText, limit, _MatchText: umlString; _IgnoreCase: Boolean): Boolean;
+function umlLimitTextTrimSpaceMatch(SText, limit, _MatchText: umlString; _IgnoreCase: Boolean): Boolean;
+function umlLimitDeleteText(SText, limit, _MatchText: umlString; _IgnoreCase: Boolean): umlString;
+function umlLimitTextAsList(SText, limit: umlString; AsLst: TCoreClassStrings): Boolean;
+function umlLimitTextAsListAndTrimSpace(SText, limit: umlString; AsLst: TCoreClassStrings): Boolean;
+function umlListAsLimitText(_List: TCoreClassStrings; limit: umlString): umlString;
 
 function umlUpdateComponentName(Name: umlString): umlString;
 function umlMakeComponentName(OWner: TCoreClassComponent; RefrenceName: umlString): umlString;
@@ -440,11 +478,16 @@ procedure umlReadComponent(Stream: TCoreClassStream; comp: TCoreClassComponent);
 procedure umlWriteComponent(Stream: TCoreClassStream; comp: TCoreClassComponent);
 procedure umlCopyComponentDataTo(comp, copyto: TCoreClassComponent);
 
-function umlProcessCycleValue(CurrentVal, DeltaVal, StartVal, OverVal: Single; var EndFlag: Boolean): Single;
+function umlProcessCycleValue(CurrentVal, DeltaVal, StartVal, OverVal: Single; var EndFlag: Boolean): Single; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+
 
 implementation
 
-uses MemoryStream64;
+uses
+  {$IF Defined(WIN32) or Defined(WIN64)}
+  Fast_MD5,
+  {$ENDIF}
+  MemoryStream64;
 
 function umlBytesOf(S: umlString): TBytes;
 begin
@@ -458,13 +501,13 @@ end;
 
 function FixedLengthString2Pascal(var S: FixedLengthString): TPascalString;
 var
-  B: TBytes;
+  b: TBytes;
 begin
-  SetLength(B, FixedLengthStringSize);
-  move(S.Data, B[0], FixedLengthStringSize);
-  SetLength(B, S.len);
-  Result.Bytes := B;
-  SetLength(B, 0);
+  SetLength(b, FixedLengthStringSize);
+  CopyPtr(@S.Data[0], @b[0], FixedLengthStringSize);
+  SetLength(b, S.len);
+  Result.Bytes := b;
+  SetLength(b, 0);
 end;
 
 function Pascal2FixedLengthString(var S: TPascalString): FixedLengthString;
@@ -476,8 +519,8 @@ begin
   if Result.len > FixedLengthStringSize then
       Result.len := FixedLengthStringSize
   else
-      FillByte(Result.Data[0], FixedLengthStringSize, 0);
-  move(bb[0], Result.Data[0], Result.len);
+      FillPtrByte(@Result.Data[0], FixedLengthStringSize, 0);
+  CopyPtr(@bb[0], @Result.Data[0], Result.len);
 end;
 
 function umlComparePosStr(const S: umlString; Offset: Integer; t: umlString): Boolean;
@@ -488,6 +531,276 @@ end;
 function umlPos(SubStr, Str: umlString; const Offset: Integer = 1): Integer;
 begin
   Result := Str.GetPos(SubStr, Offset);
+end;
+
+function umlVarToStr(V: Variant): umlString;
+var
+  n, b64: umlString;
+begin
+  try
+    case VarType(V) of
+      varSmallint, varInteger, varShortInt, varByte, varWord, varLongWord:
+        begin
+          Result := IntToStr(V);
+        end;
+      varInt64:
+        begin
+          Result := IntToStr(Int64(V));
+        end;
+      varUInt64:
+        begin
+          {$IFDEF FPC}
+          Result := IntToStr(UInt64(V));
+          {$ELSE}
+          Result := UIntToStr(UInt64(V));
+          {$ENDIF}
+        end;
+      varSingle, varDouble, varCurrency, varDate:
+        begin
+          Result := FloatToStr(V);
+        end;
+      varOleStr, varString, varUString:
+        begin
+          n.Text := VarToStr(V);
+
+          if umlExistsLimitChar(n, #10#13#9#8#0) then
+            begin
+              umlEncodeLineBASE64(n, b64);
+              Result := '___base64:' + b64.Text;
+            end
+          else
+              Result := n.Text;
+        end;
+      varBoolean:
+        begin
+          Result := BoolToStr(V, True);
+        end;
+      else
+        Result := VarToStr(V);
+    end;
+  except
+    try
+        Result := VarToStr(V);
+    except
+        Result := '';
+    end;
+  end;
+end;
+
+function umlStrToVar(S: umlString): Variant;
+var
+  n, b64: umlString;
+begin
+  n := umlTrimSpace(S);
+  try
+    if n.ComparePos(1, '___base64:') then
+      begin
+        n := umlDeleteFirstStr(n, ':').Text;
+        umlDecodeLineBASE64(n, b64);
+        Result := b64.Text;
+      end
+    else
+      begin
+        case umlGetNumTextType(n) of
+          ntBool: Result := StrToBool(n.Text);
+          ntInt: Result := StrToInt(n.Text);
+          ntInt64: Result := StrToInt64(n.Text);
+          {$IFDEF FPC}
+          ntUInt64: Result := StrToQWord(n.Text);
+          {$ELSE}
+          ntUInt64: Result := StrToUInt64(n.Text);
+          {$ENDIF}
+          ntWord: Result := StrToInt(n.Text);
+          ntByte: Result := StrToInt(n.Text);
+          ntSmallInt: Result := StrToInt(n.Text);
+          ntShortInt: Result := StrToInt(n.Text);
+          ntUInt: Result := StrToInt(n.Text);
+          ntSingle: Result := StrToFloat(n.Text);
+          ntDouble: Result := StrToFloat(n.Text);
+          ntCurrency: Result := StrToFloat(n.Text);
+          else Result := n.Text;
+        end;
+      end;
+  except
+      Result := n.Text;
+  end;
+end;
+
+function umlMax(v1, v2: UInt64): UInt64;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: Cardinal): Cardinal;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: Word): Word;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: Byte): Byte;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: Int64): Int64;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: Integer): Integer;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: SmallInt): SmallInt;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: ShortInt): ShortInt;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: Double): Double;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMax(v1, v2: Single): Single;
+begin
+  if v1 > v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: UInt64): UInt64;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: Cardinal): Cardinal;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: Word): Word;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: Byte): Byte;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: Int64): Int64;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: Integer): Integer;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: SmallInt): SmallInt;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: ShortInt): ShortInt;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: Double): Double;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlMin(v1, v2: Single): Single;
+begin
+  if v1 < v2 then
+      Result := v1
+  else
+      Result := v2;
+end;
+
+function umlDeltaNumber(V, delta: NativeInt): NativeInt;
+begin
+  Result := (V + (delta - 1)) and not(delta - 1);
+end;
+
+function umlGetResourceStream(const FileName: umlString): TStream;
+var
+  n: umlString;
+begin
+  if FileName.Exists('.') then
+      n := umlDeleteLastStr(FileName, '.')
+  else
+      n := FileName;
+
+  Result := TResourceStream.Create(hInstance, n.Text, RT_RCDATA);
 end;
 
 function umlSameVarValue(const v1, v2: Variant): Boolean;
@@ -691,7 +1004,7 @@ begin
   FindClose(SR);
 end;
 
-function umlGetFileList(FullPath: umlString; _AsList: TCoreClassStrings): Integer;
+function umlGetFileList(FullPath: umlString; AsLst: TCoreClassStrings): Integer;
 var
   _SR: TSR;
 begin
@@ -699,14 +1012,14 @@ begin
   if umlFindFirstFile(umlCombineFileName(FullPath, '*'), _SR) then
     begin
       repeat
-        _AsList.Add(_SR.Name);
+        AsLst.Add(_SR.Name);
         Inc(Result);
       until not umlFindNextFile(_SR);
     end;
   umlFindClose(_SR);
 end;
 
-function umlGetDirList(FullPath: umlString; _AsList: TCoreClassStrings): Integer;
+function umlGetDirList(FullPath: umlString; AsLst: TCoreClassStrings): Integer;
 var
   _SR: TSR;
 begin
@@ -714,7 +1027,7 @@ begin
   if umlFindFirstDir(umlCombineFileName(FullPath, '*'), _SR) then
     begin
       repeat
-        _AsList.Add(_SR.Name);
+        AsLst.Add(_SR.Name);
         Inc(Result);
       until not umlFindNextDir(_SR);
     end;
@@ -780,6 +1093,8 @@ begin
           n := Result;
           Result := umlStringReplace(Result, '\\', '\', True);
         until Result.Same(n);
+        if (Result.len > 0) and (Result.Last <> '\') then
+            Result.Append('\');
       end;
     else
       begin
@@ -803,6 +1118,8 @@ begin
           n := Result;
           Result := umlStringReplace(Result, '//', '/', True);
         until Result.Same(n);
+        if (Result.len > 0) and (Result.Last <> '/') then
+            Result.Append('/');
       end;
   end;
 end;
@@ -840,7 +1157,7 @@ begin
         until Result.Same(n);
 
         if Result.Last = '\' then
-            Result.Delete(Result.len, 1);
+            Result.DeleteLast;
       end;
     else
       begin
@@ -948,6 +1265,9 @@ begin
   IOHnd.FlushBuff := nil;
   IOHnd.PrepareReadPosition := -1;
   IOHnd.PrepareReadBuff := nil;
+  IOHnd.IORead := 0;
+  IOHnd.IOWrite := 0;
+  IOHnd.WriteFlag := False;
   IOHnd.Data := nil;
   IOHnd.Return := umlNotError;
 end;
@@ -1102,6 +1422,23 @@ begin
   IOHnd.Attrib := umlDefaultAttrib;
   IOHnd.Name := '';
   IOHnd.OpenFlags := False;
+  IOHnd.WriteFlag := False;
+  Result := True;
+end;
+
+function umlFileUpdate(var IOHnd: TIOHnd): Boolean;
+begin
+  if (IOHnd.OpenFlags = False) or (IOHnd.Handle = nil) then
+    begin
+      IOHnd.Return := umlFileHandleError;
+      Result := False;
+      Exit;
+    end;
+
+  umlFileEndWrite(IOHnd);
+  umlResetPrepareRead(IOHnd);
+  IOHnd.WriteFlag := False;
+
   Result := True;
 end;
 
@@ -1158,17 +1495,19 @@ begin
       if IOHnd.Handle.Size - IOHnd.Handle.Position >= PrepareReadCacheSize then
         begin
           Result := m64.CopyFrom(IOHnd.Handle, PrepareReadCacheSize) = PrepareReadCacheSize;
+          Inc(IOHnd.IORead, PrepareReadCacheSize);
         end
       else
         begin
           preRedSiz := IOHnd.Handle.Size - IOHnd.Handle.Position;
           Result := m64.CopyFrom(IOHnd.Handle, preRedSiz) = preRedSiz;
+          Inc(IOHnd.IORead, preRedSiz);
         end;
     end;
 
   if (IOHnd.Position >= IOHnd.PrepareReadPosition) and (IOHnd.PrepareReadPosition + m64.Size >= IOHnd.Position + Size) then
     begin
-      move(Pointer(NativeUInt(m64.Memory) + (IOHnd.Position - IOHnd.PrepareReadPosition))^, Buffers, Size);
+      CopyPtr(Pointer(NativeUInt(m64.Memory) + (IOHnd.Position - IOHnd.PrepareReadPosition)), @Buffers, Size);
       Inc(IOHnd.Position, Size);
       Result := True;
     end
@@ -1235,6 +1574,7 @@ begin
         Inc(IOHnd.Position, Size);
         IOHnd.Return := umlNotError;
         Result := True;
+        Inc(IOHnd.IORead, Size);
         Exit;
       end;
     if IOHnd.Handle.Read(Buffers, Size) <> Size then
@@ -1246,6 +1586,7 @@ begin
     Inc(IOHnd.Position, Size);
     IOHnd.Return := umlNotError;
     Result := True;
+    Inc(IOHnd.IORead, Size);
   except
     IOHnd.Return := umlFileReadError;
     Result := False;
@@ -1281,12 +1622,13 @@ begin
           Result := False;
           Exit;
         end;
+      Inc(IOHnd.IOWrite, m64.Size);
       DisposeObject(m64);
     end;
   Result := True;
 end;
 
-function umlFileWrite(var IOHnd: TIOHnd; Size: Int64; var Buffers): Boolean;
+function umlFileWrite(var IOHnd: TIOHnd; const Size: Int64; var Buffers): Boolean;
 var
   BuffPointer: Pointer;
   i          : NativeInt;
@@ -1304,6 +1646,8 @@ begin
       Result := True;
       Exit;
     end;
+
+  IOHnd.WriteFlag := True;
 
   umlResetPrepareRead(IOHnd);
 
@@ -1358,6 +1702,7 @@ begin
             IOHnd.Size := IOHnd.Position;
         IOHnd.Return := umlNotError;
         Result := True;
+        Inc(IOHnd.IOWrite, Size);
         Exit;
       end;
     if IOHnd.Handle.Write(Buffers, Size) <> Size then
@@ -1372,6 +1717,7 @@ begin
         IOHnd.Size := IOHnd.Position;
     IOHnd.Return := umlNotError;
     Result := True;
+    Inc(IOHnd.IOWrite, Size);
   except
     IOHnd.Return := umlFileWriteError;
     Result := False;
@@ -1577,19 +1923,19 @@ begin
   Result := RenameFile(OldName.Text, NewName.Text);
 end;
 
-procedure umlSetLength(var aStr: umlString; NewStrLength: Integer);
+procedure umlSetLength(var aStr: umlString; len: Integer);
 begin
-  aStr.len := NewStrLength;
+  aStr.len := len;
 end;
 
-procedure umlSetLength(var aStr: umlBytes; NewStrLength: Integer);
+procedure umlSetLength(var aStr: umlBytes; len: Integer);
 begin
-  SetLength(aStr, NewStrLength);
+  SetLength(aStr, len);
 end;
 
-procedure umlSetLength(var aStr: umlArrayString; NewStrLength: Integer);
+procedure umlSetLength(var aStr: umlArrayString; len: Integer);
 begin
-  SetLength(aStr, NewStrLength);
+  SetLength(aStr, len);
 end;
 
 function umlGetLength(aStr: umlString): Integer;
@@ -1617,9 +1963,9 @@ begin
   Result := LowerCase(Str.Text);
 end;
 
-function umlCopyStr(aStr: umlString; MainPosition, LastPosition: Integer): umlString;
+function umlCopyStr(var aStr: umlString; MainPosition, LastPosition: Integer): umlString;
 begin
-  Result := aStr.Copy(MainPosition, LastPosition - MainPosition);
+  Result := aStr.GetString(MainPosition, LastPosition);
 end;
 
 function umlSameText(s1, s2: umlString): Boolean;
@@ -1676,26 +2022,37 @@ Cycle_Label:
   goto Cycle_Label;
 end;
 
-function umlDeleteChar(_Text, _Char: umlString): umlString;
+function umlDeleteChar(SText, ch: umlString): umlString;
 var
   i: Integer;
 begin
   Result := '';
-  if _Text.len > 0 then
-    for i := 1 to _Text.len do
-      if not umlMatchLimitChar(_Text[i], _Char) then
-          Result := Result + _Text[i];
+  if SText.len > 0 then
+    for i := 1 to SText.len do
+      if not CharIn(SText[i], ch) then
+          Result.Append(SText[i]);
 end;
 
-function umlDeleteChar(_Text: umlString; const SomeCharsets: TOrdChars): umlString; overload;
+function umlDeleteChar(SText: umlString; const SomeChars: array of SystemChar): umlString;
 var
   i: Integer;
 begin
   Result := '';
-  if _Text.len > 0 then
-    for i := 1 to _Text.len do
-      if not CharIn(_Text[i], SomeCharsets) then
-          Result := Result + _Text[i];
+  if SText.len > 0 then
+    for i := 1 to SText.len do
+      if not CharIn(SText[i], SomeChars) then
+          Result.Append(SText[i]);
+end;
+
+function umlDeleteChar(SText: umlString; const SomeCharsets: TOrdChars): umlString; overload;
+var
+  i: Integer;
+begin
+  Result := '';
+  if SText.len > 0 then
+    for i := 1 to SText.len do
+      if not CharIn(SText[i], SomeCharsets) then
+          Result.Append(SText[i]);
 end;
 
 function umlGetNumberCharInText(n: umlString): umlString;
@@ -1718,74 +2075,20 @@ begin
         end
       else
         begin
-          Result := Result + n[i];
+          Result.Append(n[i]);
           Inc(i);
         end;
     end;
 end;
 
-function umlGetLimitCharPos(CharValue: umlChar; LimitValue: umlString): Integer;
-var
-  LimitCharValuePos, LimitCharValueLength: Integer;
-begin
-  Result := 0;
-  LimitCharValueLength := umlGetLength(LimitValue);
-  if LimitCharValueLength > 0 then
-    begin
-      LimitCharValuePos := 1;
-      if LimitCharValueLength > 1 then
-        begin
-          while (LimitValue[LimitCharValuePos] <> CharValue) and (LimitCharValuePos < LimitCharValueLength) do
-              Inc(LimitCharValuePos);
-          if LimitCharValuePos < LimitCharValueLength then
-              Result := LimitCharValuePos;
-        end;
-      if Result = 0 then
-        begin
-          if LimitValue[LimitCharValueLength] = CharValue then
-              Result := LimitCharValueLength;
-        end;
-    end;
-end;
-
 function umlMatchLimitChar(CharValue: umlChar; LimitValue: umlPString): Boolean;
-var
-  LimitCharValuePos, LimitCharValueLength: Integer;
 begin
-  Result := False;
-  LimitCharValueLength := umlGetLength(LimitValue^);
-  if LimitCharValueLength > 0 then
-    begin
-      LimitCharValuePos := 1;
-      if LimitCharValueLength > 1 then
-        begin
-          while (LimitValue^[LimitCharValuePos] <> CharValue) and (LimitCharValuePos < LimitCharValueLength) do
-              Inc(LimitCharValuePos);
-          Result := LimitCharValuePos < LimitCharValueLength;
-        end;
-      if not Result then
-          Result := LimitValue^[LimitCharValueLength] = CharValue;
-    end;
+  Result := CharIn(CharValue, LimitValue);
 end;
 
 function umlMatchLimitChar(CharValue: umlChar; LimitValue: umlString): Boolean;
-var
-  LimitCharValuePos, LimitCharValueLength: Integer;
 begin
-  Result := False;
-  LimitCharValueLength := umlGetLength(LimitValue);
-  if LimitCharValueLength > 0 then
-    begin
-      LimitCharValuePos := 1;
-      if LimitCharValueLength > 1 then
-        begin
-          while (LimitValue[LimitCharValuePos] <> CharValue) and (LimitCharValuePos < LimitCharValueLength) do
-              Inc(LimitCharValuePos);
-          Result := LimitCharValuePos < LimitCharValueLength;
-        end;
-      if not Result then
-          Result := LimitValue[LimitCharValueLength] = CharValue;
-    end;
+  Result := CharIn(CharValue, @LimitValue);
 end;
 
 function umlExistsLimitChar(StrValue: umlString; LimitValue: umlString): Boolean;
@@ -1794,7 +2097,7 @@ var
 begin
   Result := True;
   for c in StrValue.buff do
-    if CharIn(c, LimitValue.buff) then
+    if CharIn(c, @LimitValue) then
         Exit;
   Result := False;
 end;
@@ -1805,83 +2108,69 @@ var
 begin
   Result := True;
   for c in StrValue.buff do
-    if CharIn(c, LimitValue.buff) then
+    if CharIn(c, @LimitValue) then
         Exit;
   Result := False;
 end;
 
-function umlDelLimitChar(StrValue: umlString; LimitValue: umlString): umlString;
+function umlTrimChar(S: umlString; limitS: umlString): umlString;
 var
-  i: Integer;
+  l, bp, ep: Integer;
 begin
   Result := '';
-  if umlGetLength(StrValue) > 0 then
-    begin
-      for i := 1 to umlGetLength(StrValue) do
-        if not umlMatchLimitChar(StrValue[i], @LimitValue) then
-            Result := Result + StrValue[i];
-    end;
-end;
-
-function umlGetLimitCharCount(StrValue: umlString; LimitValue: umlString): Integer;
-var
-  i: Integer;
-begin
-  Result := 0;
-  if umlGetLength(StrValue) > 0 then
-    begin
-      for i := 1 to umlGetLength(StrValue) do
-        begin
-          if umlMatchLimitChar(StrValue[i], @LimitValue) then
-              Inc(Result);
-        end;
-    end;
-end;
-
-function umlTrimChar(S: umlString; SpaceStr: umlString): umlString;
-var
-  i, l: Integer;
-begin
-  Result := '';
-  l := umlGetLength(S);
+  l := S.len;
   if l > 0 then
     begin
-      i := 1;
-      while umlMatchLimitChar(S[i], @SpaceStr) do
+      bp := 1;
+      while CharIn(S[bp], @limitS) do
         begin
-          Inc(i);
-          if (i > l) then
+          Inc(bp);
+          if (bp > l) then
+            begin
+              Result := '';
               Exit;
+            end;
         end;
-      if not(i > l) then
+      if bp > l then
+          Result := ''
+      else
         begin
-          while umlMatchLimitChar(S[l], @SpaceStr) do
-              Dec(l);
-          Result := umlCopyStr(S, i, l + 1);
+          ep := l;
+
+          while CharIn(S[ep], @limitS) do
+            begin
+              Dec(ep);
+              if (ep < 1) then
+                begin
+                  Result := '';
+                  Exit;
+                end;
+            end;
+          Result := S.GetString(bp, ep + 1);
         end;
     end;
 end;
 
-function umlGetFirstStr(aStr: umlString; SpaceStr: umlString): umlString;
+function umlGetFirstStr(aStr: umlString; limitS: umlString): umlString;
 var
   umlGetFirstName_PrevPos, umlGetFirstName_Pos: Integer;
 begin
   Result := aStr;
-  if umlGetLength(Result) <= 1 then
+  if Result.len <= 1 then
     begin
       Exit;
     end;
   umlGetFirstName_Pos := 1;
-  while umlMatchLimitChar(Result[umlGetFirstName_Pos], @SpaceStr) do
+  while umlMatchLimitChar(Result[umlGetFirstName_Pos], @limitS) do
     begin
-      if umlGetFirstName_Pos = umlGetLength(Result) then
+      if umlGetFirstName_Pos = Result.len then
           Exit;
       Inc(umlGetFirstName_Pos);
     end;
   umlGetFirstName_PrevPos := umlGetFirstName_Pos;
-  while not umlMatchLimitChar(Result[umlGetFirstName_Pos], @SpaceStr) do
+  while not umlMatchLimitChar(Result[umlGetFirstName_Pos], @limitS) do
     begin
-      if umlGetFirstName_Pos = umlGetLength(Result) then
+      if umlGetFirstName_Pos = Result.len then
         begin
           Result := umlCopyStr(Result, umlGetFirstName_PrevPos, umlGetFirstName_Pos + 1);
           Exit;
@@ -1891,24 +2180,24 @@ begin
   Result := umlCopyStr(Result, umlGetFirstName_PrevPos, umlGetFirstName_Pos);
 end;
 
-function umlGetLastStr(aStr: umlString; SpaceStr: umlString): umlString;
+function umlGetLastStr(aStr: umlString; limitS: umlString): umlString;
 var
   umlGetLastName_PrevPos, umlGetLastName_Pos: Integer;
 begin
   Result := aStr;
-  umlGetLastName_Pos := umlGetLength(Result);
+  umlGetLastName_Pos := Result.len;
   if umlGetLastName_Pos <= 1 then
     begin
       Exit;
     end;
-  while umlMatchLimitChar(Result[umlGetLastName_Pos], @SpaceStr) do
+  while umlMatchLimitChar(Result[umlGetLastName_Pos], @limitS) do
     begin
       if umlGetLastName_Pos = 1 then
           Exit;
       Dec(umlGetLastName_Pos);
     end;
   umlGetLastName_PrevPos := umlGetLastName_Pos;
-  while not umlMatchLimitChar(Result[umlGetLastName_Pos], @SpaceStr) do
+  while not umlMatchLimitChar(Result[umlGetLastName_Pos], @limitS) do
     begin
       if umlGetLastName_Pos = 1 then
         begin
@@ -1920,59 +2209,59 @@ begin
   Result := umlCopyStr(Result, umlGetLastName_Pos + 1, umlGetLastName_PrevPos + 1);
 end;
 
-function umlDeleteFirstStr(aStr: umlString; SpaceStr: umlString): umlString;
+function umlDeleteFirstStr(aStr: umlString; limitS: umlString): umlString;
 var
   umlMaskFirstName_Pos: Integer;
 begin
   Result := aStr;
-  if umlGetLength(Result) <= 1 then
+  if Result.len <= 1 then
     begin
       Result := '';
       Exit;
     end;
   umlMaskFirstName_Pos := 1;
-  while umlMatchLimitChar(Result[umlMaskFirstName_Pos], @SpaceStr) do
+  while umlMatchLimitChar(Result[umlMaskFirstName_Pos], @limitS) do
     begin
-      if umlMaskFirstName_Pos = umlGetLength(Result) then
+      if umlMaskFirstName_Pos = Result.len then
         begin
           Result := '';
           Exit;
         end;
       Inc(umlMaskFirstName_Pos);
     end;
-  while not umlMatchLimitChar(Result[umlMaskFirstName_Pos], @SpaceStr) do
+  while not umlMatchLimitChar(Result[umlMaskFirstName_Pos], @limitS) do
     begin
-      if umlMaskFirstName_Pos = umlGetLength(Result) then
+      if umlMaskFirstName_Pos = Result.len then
         begin
           Result := '';
           Exit;
         end;
       Inc(umlMaskFirstName_Pos);
     end;
-  while umlMatchLimitChar(Result[umlMaskFirstName_Pos], @SpaceStr) do
+  while umlMatchLimitChar(Result[umlMaskFirstName_Pos], @limitS) do
     begin
-      if umlMaskFirstName_Pos = umlGetLength(Result) then
+      if umlMaskFirstName_Pos = Result.len then
         begin
           Result := '';
           Exit;
         end;
       Inc(umlMaskFirstName_Pos);
     end;
-  Result := umlCopyStr(Result, umlMaskFirstName_Pos, umlGetLength(Result) + 1);
+  Result := umlCopyStr(Result, umlMaskFirstName_Pos, Result.len + 1);
 end;
 
-function umlDeleteLastStr(aStr: umlString; SpaceStr: umlString): umlString;
+function umlDeleteLastStr(aStr: umlString; limitS: umlString): umlString;
 var
   umlMaskLastName_Pos: Integer;
 begin
   Result := aStr;
-  umlMaskLastName_Pos := umlGetLength(Result);
+  umlMaskLastName_Pos := Result.len;
   if umlMaskLastName_Pos <= 1 then
     begin
       Result := '';
       Exit;
     end;
-  while umlMatchLimitChar(Result[umlMaskLastName_Pos], @SpaceStr) do
+  while umlMatchLimitChar(Result[umlMaskLastName_Pos], @limitS) do
     begin
       if umlMaskLastName_Pos = 1 then
         begin
@@ -1981,7 +2270,7 @@ begin
         end;
       Dec(umlMaskLastName_Pos);
     end;
-  while not umlMatchLimitChar(Result[umlMaskLastName_Pos], @SpaceStr) do
+  while not umlMatchLimitChar(Result[umlMaskLastName_Pos], @limitS) do
     begin
       if umlMaskLastName_Pos = 1 then
         begin
@@ -1990,7 +2279,7 @@ begin
         end;
       Dec(umlMaskLastName_Pos);
     end;
-  while umlMatchLimitChar(Result[umlMaskLastName_Pos], @SpaceStr) do
+  while umlMatchLimitChar(Result[umlMaskLastName_Pos], @limitS) do
     begin
       if umlMaskLastName_Pos = 1 then
         begin
@@ -2002,35 +2291,35 @@ begin
   umlSetLength(Result, umlMaskLastName_Pos);
 end;
 
-function umlGetIndexStrCount(aStr: umlString; SpaceStr: umlString): Integer;
+function umlGetIndexStrCount(aStr: umlString; limitS: umlString): Integer;
 var
   Str : umlString;
   APos: Integer;
 begin
   Str := aStr;
   Result := 0;
-  if umlGetLength(Str) = 0 then
+  if Str.len = 0 then
       Exit;
   APos := 1;
   while True do
     begin
-      while umlMatchLimitChar(Str[APos], @SpaceStr) do
+      while umlMatchLimitChar(Str[APos], @limitS) do
         begin
-          if APos >= umlGetLength(Str) then
+          if APos >= Str.len then
               Exit;
           Inc(APos);
         end;
       Inc(Result);
-      while not umlMatchLimitChar(Str[APos], @SpaceStr) do
+      while not umlMatchLimitChar(Str[APos], @limitS) do
         begin
-          if APos >= umlGetLength(Str) then
+          if APos >= Str.len then
               Exit;
           Inc(APos);
         end;
     end;
 end;
 
-function umlGetIndexStr(aStr: umlString; SpaceStr: umlString; Index: Integer): umlString;
+function umlGetIndexStr(aStr: umlString; limitS: umlString; Index: Integer): umlString;
 var
   umlGetIndexName_Repeat: Integer;
 begin
@@ -2042,31 +2331,31 @@ begin
       end;
     0, 1:
       begin
-        Result := umlGetFirstStr(aStr, SpaceStr);
+        Result := umlGetFirstStr(aStr, limitS);
         Exit;
       end;
   end;
-  if index >= umlGetIndexStrCount(aStr, SpaceStr) then
+  if index >= umlGetIndexStrCount(aStr, limitS) then
     begin
-      Result := umlGetLastStr(aStr, SpaceStr);
+      Result := umlGetLastStr(aStr, limitS);
       Exit;
     end;
   Result := aStr;
   for umlGetIndexName_Repeat := 2 to index do
     begin
-      Result := umlDeleteFirstStr(Result, SpaceStr);
+      Result := umlDeleteFirstStr(Result, limitS);
     end;
-  Result := umlGetFirstStr(Result, SpaceStr);
+  Result := umlGetFirstStr(Result, limitS);
 end;
 
 procedure umlGetSplitArray(_SourText: umlString; var _DestArray: umlArrayString; _SplitChar: umlString);
 var
   i, _IndexCount: Integer;
-  _Text         : umlString;
+  SText         : umlString;
 begin
-  _Text := _SourText;
-  _IndexCount := umlGetIndexStrCount(_Text, _SplitChar);
-  if (_IndexCount = 0) and (umlGetLength(_SourText) > 0) then
+  SText := _SourText;
+  _IndexCount := umlGetIndexStrCount(SText, _SplitChar);
+  if (_IndexCount = 0) and (_SourText.len > 0) then
     begin
       SetLength(_DestArray, 1);
       _DestArray[0] := _SourText;
@@ -2077,8 +2366,8 @@ begin
       i := low(_DestArray);
       while i < _IndexCount do
         begin
-          _DestArray[i] := umlGetFirstStr(_Text, _SplitChar);
-          _Text := umlDeleteFirstStr(_Text, _SplitChar);
+          _DestArray[i] := umlGetFirstStr(SText, _SplitChar);
+          SText := umlDeleteFirstStr(SText, _SplitChar);
           Inc(i);
         end;
     end;
@@ -2108,15 +2397,15 @@ begin
         Result := _List[i];
 end;
 
-function umlGetFirstStr_M(aStr: umlString; SpaceStr: umlString): umlString;
+function umlGetFirstStr_M(aStr: umlString; limitS: umlString): umlString;
 var
   umlGetFirstName_PrevPos, umlGetFirstName_Pos: Integer;
 begin
   Result := aStr;
-  if umlGetLength(Result) <= 1 then
+  if Result.len <= 1 then
       Exit;
   umlGetFirstName_Pos := 1;
-  if umlMatchLimitChar(Result[umlGetFirstName_Pos], @SpaceStr) then
+  if umlMatchLimitChar(Result[umlGetFirstName_Pos], @limitS) then
     begin
       Inc(umlGetFirstName_Pos);
       umlGetFirstName_PrevPos := umlGetFirstName_Pos;
@@ -2124,9 +2413,9 @@ begin
   else
     begin
       umlGetFirstName_PrevPos := umlGetFirstName_Pos;
-      while not umlMatchLimitChar(Result[umlGetFirstName_Pos], @SpaceStr) do
+      while not umlMatchLimitChar(Result[umlGetFirstName_Pos], @limitS) do
         begin
-          if umlGetFirstName_Pos = umlGetLength(Result) then
+          if umlGetFirstName_Pos = Result.len then
             begin
               Result := umlCopyStr(Result, umlGetFirstName_PrevPos, umlGetFirstName_Pos + 1);
               Exit;
@@ -2137,43 +2426,43 @@ begin
   Result := umlCopyStr(Result, umlGetFirstName_PrevPos, umlGetFirstName_Pos);
 end;
 
-function umlDeleteFirstStr_M(aStr: umlString; SpaceStr: umlString): umlString;
+function umlDeleteFirstStr_M(aStr: umlString; limitS: umlString): umlString;
 var
   umlMaskFirstName_Pos: Integer;
 begin
   Result := aStr;
-  if umlGetLength(Result) <= 1 then
+  if Result.len <= 1 then
     begin
       Result := '';
       Exit;
     end;
   umlMaskFirstName_Pos := 1;
-  while not umlMatchLimitChar(Result[umlMaskFirstName_Pos], @SpaceStr) do
+  while not umlMatchLimitChar(Result[umlMaskFirstName_Pos], @limitS) do
     begin
-      if umlMaskFirstName_Pos = umlGetLength(Result) then
+      if umlMaskFirstName_Pos = Result.len then
         begin
           Result := '';
           Exit;
         end;
       Inc(umlMaskFirstName_Pos);
     end;
-  if umlMatchLimitChar(Result[umlMaskFirstName_Pos], @SpaceStr) then
+  if umlMatchLimitChar(Result[umlMaskFirstName_Pos], @limitS) then
       Inc(umlMaskFirstName_Pos);
-  Result := umlCopyStr(Result, umlMaskFirstName_Pos, umlGetLength(Result) + 1);
+  Result := umlCopyStr(Result, umlMaskFirstName_Pos, Result.len + 1);
 end;
 
-function umlGetLastStr_M(aStr: umlString; SpaceStr: umlString): umlString;
+function umlGetLastStr_M(aStr: umlString; limitS: umlString): umlString;
 var
   umlGetLastName_PrevPos, umlGetLastName_Pos: Integer;
 begin
   Result := aStr;
-  umlGetLastName_Pos := umlGetLength(Result);
+  umlGetLastName_Pos := Result.len;
   if umlGetLastName_Pos <= 1 then
       Exit;
-  if Result[umlGetLastName_Pos] = SpaceStr then
+  if Result[umlGetLastName_Pos] = limitS then
       Dec(umlGetLastName_Pos);
   umlGetLastName_PrevPos := umlGetLastName_Pos;
-  while not umlMatchLimitChar(Result[umlGetLastName_Pos], @SpaceStr) do
+  while not umlMatchLimitChar(Result[umlGetLastName_Pos], @limitS) do
     begin
       if umlGetLastName_Pos = 1 then
         begin
@@ -2185,20 +2474,20 @@ begin
   Result := umlCopyStr(Result, umlGetLastName_Pos + 1, umlGetLastName_PrevPos + 1);
 end;
 
-function umlDeleteLastStr_M(aStr: umlString; SpaceStr: umlString): umlString;
+function umlDeleteLastStr_M(aStr: umlString; limitS: umlString): umlString;
 var
   umlMaskLastName_Pos: Integer;
 begin
   Result := aStr;
-  umlMaskLastName_Pos := umlGetLength(Result);
+  umlMaskLastName_Pos := Result.len;
   if umlMaskLastName_Pos <= 1 then
     begin
       Result := '';
       Exit;
     end;
-  if umlMatchLimitChar(Result[umlMaskLastName_Pos], @SpaceStr) then
+  if umlMatchLimitChar(Result[umlMaskLastName_Pos], @limitS) then
       Dec(umlMaskLastName_Pos);
-  while not umlMatchLimitChar(Result[umlMaskLastName_Pos], @SpaceStr) do
+  while not umlMatchLimitChar(Result[umlMaskLastName_Pos], @limitS) do
     begin
       if umlMaskLastName_Pos = 1 then
         begin
@@ -2210,33 +2499,33 @@ begin
   umlSetLength(Result, umlMaskLastName_Pos);
 end;
 
-function umlGetIndexStrCount_M(aStr: umlString; SpaceStr: umlString): Integer;
+function umlGetIndexStrCount_M(aStr: umlString; limitS: umlString): Integer;
 var
   Str : umlString;
   APos: Integer;
 begin
   Str := aStr;
   Result := 0;
-  if umlGetLength(Str) = 0 then
+  if Str.len = 0 then
       Exit;
   APos := 1;
   Result := 1;
   while True do
     begin
-      while not umlMatchLimitChar(Str[APos], @SpaceStr) do
+      while not umlMatchLimitChar(Str[APos], @limitS) do
         begin
-          if APos = umlGetLength(Str) then
+          if APos = Str.len then
               Exit;
           Inc(APos);
         end;
       Inc(Result);
-      if APos = umlGetLength(Str) then
+      if APos = Str.len then
           Exit;
       Inc(APos);
     end;
 end;
 
-function umlGetIndexStr_M(aStr: umlString; SpaceStr: umlString; Index: Integer): umlString;
+function umlGetIndexStr_M(aStr: umlString; limitS: umlString; Index: Integer): umlString;
 var
   umlGetIndexName_Repeat: Integer;
 begin
@@ -2248,33 +2537,33 @@ begin
       end;
     0, 1:
       begin
-        Result := umlGetFirstStr_M(aStr, SpaceStr);
+        Result := umlGetFirstStr_M(aStr, limitS);
         Exit;
       end;
   end;
-  if index >= umlGetIndexStrCount_M(aStr, SpaceStr) then
+  if index >= umlGetIndexStrCount_M(aStr, limitS) then
     begin
-      Result := umlGetLastStr_M(aStr, SpaceStr);
+      Result := umlGetLastStr_M(aStr, limitS);
       Exit;
     end;
   Result := aStr;
   for umlGetIndexName_Repeat := 2 to index do
-      Result := umlDeleteFirstStr_M(Result, SpaceStr);
-  Result := umlGetFirstStr_M(Result, SpaceStr);
+      Result := umlDeleteFirstStr_M(Result, limitS);
+  Result := umlGetFirstStr_M(Result, limitS);
 end;
 
-function umlGetFirstTextPos(S: umlString; ATextList: array of umlString; var OutText: umlString): Integer;
+function umlGetFirstTextPos(S: umlString; TextArry: array of umlString; var OutText: umlString): Integer;
 var
   i, j: Integer;
 begin
   Result := -1;
   for i := 1 to S.len do
     begin
-      for j := low(ATextList) to high(ATextList) do
+      for j := low(TextArry) to high(TextArry) do
         begin
-          if S.ComparePos(i, @ATextList[j]) then
+          if S.ComparePos(i, @TextArry[j]) then
             begin
-              OutText := ATextList[j];
+              OutText := TextArry[j];
               Result := i;
               Exit;
             end;
@@ -2282,25 +2571,25 @@ begin
     end;
 end;
 
-function umlDeleteText(ASourText: umlString; ABeginFlag, AEndFlag: array of umlString; ANeedBegin, ANeedEnd: Boolean): umlString;
+function umlDeleteText(Sour: umlString; bToken, eToken: array of umlString; ANeedBegin, ANeedEnd: Boolean): umlString;
 var
   ABeginPos, AEndPos           : Integer;
   ABeginText, AEndText, ANewStr: umlString;
 begin
-  Result := ASourText;
-  if umlGetLength(ASourText) > 0 then
+  Result := Sour;
+  if Sour.len > 0 then
     begin
-      ABeginPos := umlGetFirstTextPos(ASourText, ABeginFlag, ABeginText);
+      ABeginPos := umlGetFirstTextPos(Sour, bToken, ABeginText);
       if ABeginPos > 0 then
-          ANewStr := umlCopyStr(ASourText, ABeginPos + umlGetLength(ABeginText), umlGetLength(ASourText) + 1)
+          ANewStr := umlCopyStr(Sour, ABeginPos + ABeginText.len, Sour.len + 1)
       else if ANeedBegin then
           Exit
       else
-          ANewStr := ASourText;
+          ANewStr := Sour;
 
-      AEndPos := umlGetFirstTextPos(ANewStr, AEndFlag, AEndText);
+      AEndPos := umlGetFirstTextPos(ANewStr, eToken, AEndText);
       if AEndPos > 0 then
-          ANewStr := umlCopyStr(ANewStr, (AEndPos + umlGetLength(AEndText)), umlGetLength(ANewStr) + 1)
+          ANewStr := umlCopyStr(ANewStr, (AEndPos + AEndText.len), ANewStr.len + 1)
       else if ANeedEnd then
           Exit
       else
@@ -2309,30 +2598,30 @@ begin
       if ABeginPos > 0 then
         begin
           if AEndPos > 0 then
-              Result := umlCopyStr(ASourText, 0, ABeginPos - 1) + umlDeleteText(ANewStr, ABeginFlag, AEndFlag, ANeedBegin, ANeedEnd)
+              Result := umlCopyStr(Sour, 0, ABeginPos - 1) + umlDeleteText(ANewStr, bToken, eToken, ANeedBegin, ANeedEnd)
           else
-              Result := umlCopyStr(ASourText, 0, ABeginPos - 1) + ANewStr;
+              Result := umlCopyStr(Sour, 0, ABeginPos - 1) + ANewStr;
         end
       else if AEndPos > 0 then
           Result := ANewStr;
     end;
 end;
 
-function umlGetTextContent(ASourText: umlString; ABeginFlag, AEndFlag: array of umlString): umlString;
+function umlGetTextContent(Sour: umlString; bToken, eToken: array of umlString): umlString;
 var
   ABeginPos, AEndPos           : Integer;
   ABeginText, AEndText, ANewStr: umlString;
 begin
   Result := '';
-  if umlGetLength(ASourText) > 0 then
+  if Sour.len > 0 then
     begin
-      ABeginPos := umlGetFirstTextPos(ASourText, ABeginFlag, ABeginText);
+      ABeginPos := umlGetFirstTextPos(Sour, bToken, ABeginText);
       if ABeginPos > 0 then
-          ANewStr := umlCopyStr(ASourText, ABeginPos + umlGetLength(ABeginText), umlGetLength(ASourText) + 1)
+          ANewStr := umlCopyStr(Sour, ABeginPos + ABeginText.len, Sour.len + 1)
       else
-          ANewStr := ASourText;
+          ANewStr := Sour;
 
-      AEndPos := umlGetFirstTextPos(ANewStr, AEndFlag, AEndText);
+      AEndPos := umlGetFirstTextPos(ANewStr, eToken, AEndText);
       if AEndPos > 0 then
           Result := umlCopyStr(ANewStr, 0, AEndPos - 1)
       else
@@ -2345,15 +2634,15 @@ type
   TValSym = (vsSymSub, vsSymAdd, vsSymAddSub, vsSymDollar, vsDot, vsDotBeforNum, vsDotAfterNum, vsNum, vsAtoF, vsE, vsUnknow);
 var
   cnt: array [TValSym] of Integer;
-  v  : TValSym;
-  c  : umlChar;
+  V  : TValSym;
+  c  : SystemChar;
   i  : Integer;
 begin
-  if umlSameText('true', S) or umlSameText('false', S) then
+  if S.Same('true') or S.Same('false') then
       Exit(ntBool);
 
-  for v := low(TValSym) to high(TValSym) do
-      cnt[v] := 0;
+  for V := low(TValSym) to high(TValSym) do
+      cnt[V] := 0;
 
   for i := 1 to S.len do
     begin
@@ -2430,26 +2719,26 @@ begin
         begin
           if cnt[vsSymSub] > 0 then
             begin
-              if cnt[vsNum] < 2 then
+              if cnt[vsNum] + cnt[vsAtoF] < 2 then
                   Result := ntShortInt
-              else if cnt[vsNum] < 4 then
+              else if cnt[vsNum] + cnt[vsAtoF] < 4 then
                   Result := ntSmallInt
-              else if cnt[vsNum] < 7 then
+              else if cnt[vsNum] + cnt[vsAtoF] < 7 then
                   Result := ntInt
-              else if cnt[vsNum] < 13 then
+              else if cnt[vsNum] + cnt[vsAtoF] < 13 then
                   Result := ntInt64
               else
                   Result := ntUnknow;
             end
           else
             begin
-              if cnt[vsNum] < 3 then
+              if cnt[vsNum] + cnt[vsAtoF] < 3 then
                   Result := ntByte
-              else if cnt[vsNum] < 5 then
+              else if cnt[vsNum] + cnt[vsAtoF] < 5 then
                   Result := ntWord
-              else if cnt[vsNum] < 8 then
+              else if cnt[vsNum] + cnt[vsAtoF] < 8 then
                   Result := ntUInt
-              else if cnt[vsNum] < 14 then
+              else if cnt[vsNum] + cnt[vsAtoF] < 14 then
                   Result := ntUInt64
               else
                   Result := ntUnknow;
@@ -2465,7 +2754,7 @@ begin
               Result := ntSmallInt
           else if cnt[vsNum] < 8 then
               Result := ntInt
-          else if cnt[vsNum] < 13 then
+          else if cnt[vsNum] < 15 then
               Result := ntInt64
           else
               Result := ntUnknow;
@@ -2478,7 +2767,7 @@ begin
               Result := ntWord
           else if cnt[vsNum] < 8 then
               Result := ntUInt
-          else if cnt[vsNum] < 14 then
+          else if cnt[vsNum] < 16 then
               Result := ntUInt64
           else
               Result := ntUnknow;
@@ -2518,7 +2807,7 @@ var
   i: Integer;
 begin
   Result := 0;
-  for i := 1 to umlGetLength(aStr) do
+  for i := 1 to aStr.len do
     if CharIn(aStr[i], [c0to9]) then
         Inc(Result);
 end;
@@ -2757,7 +3046,7 @@ MultipleStringRep_Label:
             end;
         end;
       SwapStr := umlCopyStr(UpperCaseSourceStr, SourceIndex, SourceLength + 1);
-      SwapLength := umlGetLength(SwapStr);
+      SwapLength := SwapStr.len;
       if SwapLength = 0 then
         begin
           Result := (UpperCaseSourceStr[SourceIndex] = umlMultipleString);
@@ -2780,7 +3069,7 @@ MultipleStringRep_Label:
               Result := False;
               Exit;
             end;
-          SwapLength := umlGetLength(SwapStr);
+          SwapLength := SwapStr.len;
           SwapIndex := 1;
           SwapChar := SwapStr[SwapLength];
           TargetChar := UpperCaseTargetStr[TargetLength];
@@ -2805,7 +3094,7 @@ MultipleStringRep_Label:
         end;
       SwapChar := SwapStr[1];
       SwapIndex := 1;
-      SwapLength := umlGetLength(SwapStr);
+      SwapLength := SwapStr.len;
       while SwapIndex <= SwapLength do
         begin
           if (TargetIndex - 1) + SwapIndex > TargetLength then
@@ -2945,7 +3234,7 @@ var
   i: Integer;
 begin
   Result := S;
-  if umlGetLength(Result) > 0 then
+  if Result.len > 0 then
     begin
       for i := 1 to umlGetLength(Result) do
         begin
@@ -2966,29 +3255,23 @@ begin
       while i <= psSrc.len do
         begin
           case psSrc[i] of
-            ' ':
-              Result := Result + '&nbsp;';
-            '<':
-              Result := Result + '&lt;';
-            '>':
-              Result := Result + '&gt;';
-            '&':
-              Result := Result + '&amp;';
-            '"':
-              Result := Result + '&quot;';
-            #9:
-              Result := Result + '&nbsp;&nbsp;&nbsp;&nbsp;';
+            ' ': Result.Append('&nbsp;');
+            '<': Result.Append('&lt;');
+            '>': Result.Append('&gt;');
+            '&': Result.Append('&amp;');
+            '"': Result.Append('&quot;');
+            #9: Result.Append('&nbsp;&nbsp;&nbsp;&nbsp;');
             #13:
               begin
                 if i + 1 <= psSrc.len then
                   begin
                     if psSrc[i + 1] = #10 then
                         Inc(i);
-                    Result := Result + '<br>';
+                    Result.Append('<br>');
                   end
                 else
                   begin
-                    Result := Result + '<br>';
+                    Result.Append('<br>');
                   end;
               end;
             #10:
@@ -2997,23 +3280,56 @@ begin
                   begin
                     if psSrc[i + 1] = #13 then
                         Inc(i);
-                    Result := Result + '<br>';
+                    Result.Append('<br>');
                   end
                 else
                   begin
-                    Result := Result + '<br>';
+                    Result.Append('<br>');
                   end;
               end;
             else
-              Result := Result + psSrc[i];
+              Result.Append(psSrc[i]);
           end;
           Inc(i);
         end;
     end;
 end;
 
+function umlURLEncode(const AValue: umlString): umlString;
+const
+  XD: array [0 .. 15] of Char = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F');
+var
+  buff: TBytes;
+  i   : Integer;
+begin
+  buff := AValue.Bytes;
+  Result := '';
+  i := 0;
+  while i < Length(buff) do
+    begin
+      if (i + 2 < Length(buff)) and (buff[i] = Ord('%')) then
+        if CharIn(SystemChar(buff[i + 1]), cHex) and CharIn(SystemChar(buff[i + 2]), cHex) then
+          begin
+            Result.Append('%' + Char(buff[i + 1]) + Char(buff[i + 2]));
+            Inc(i, 3);
+            Continue;
+          end;
+
+      if (buff[i] > 33) and (buff[i] < 127) then
+        begin
+          if CharIn(SystemChar(buff[i]), [c0to9, cAtoZ], '_') then
+              Result.Append(Char(buff[i]))
+          else
+              Result.Append('%' + XD[(buff[i] shr 4) and $0F] + XD[buff[i] and $0F]);
+        end
+      else
+          Result.Append('%' + XD[(buff[i] shr 4) and $0F] + XD[buff[i] and $0F]);
+      Inc(i);
+    end;
+end;
+
 type
-  TByte4 = record
+  TByte4 = packed record
     b1: Byte;
     b2: Byte;
     b3: Byte;
@@ -3022,7 +3338,7 @@ type
 
   PByte4 = ^TByte4;
 
-  TByte3 = record
+  TByte3 = packed record
     b1: Byte;
     b2: Byte;
     b3: Byte;
@@ -3113,7 +3429,7 @@ const
     090, 097, 098, 099, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 048, 049, 050, 051, 052, 053, 054, 055,
     056, 057, 043, 047);
 var
-  B, InMax3        : NativeUInt;
+  b, InMax3        : NativeUInt;
   InPtr, InLimitPtr: ^Byte;
   OutPtr           : PByte4;
 begin
@@ -3125,47 +3441,47 @@ begin
   NativeUInt(InLimitPtr) := NativeUInt(InPtr) + InMax3;
   while InPtr <> InLimitPtr do
     begin
-      B := InPtr^;
-      B := B shl 8;
+      b := InPtr^;
+      b := b shl 8;
       Inc(InPtr);
-      B := B or InPtr^;
-      B := B shl 8;
+      b := b or InPtr^;
+      b := b shl 8;
       Inc(InPtr);
-      B := B or InPtr^;
+      b := b or InPtr^;
       Inc(InPtr);
-      OutPtr^.b4 := umlBase64_ENCODE_TABLE[B and $3F];
-      B := B shr 6;
-      OutPtr^.b3 := umlBase64_ENCODE_TABLE[B and $3F];
-      B := B shr 6;
-      OutPtr^.b2 := umlBase64_ENCODE_TABLE[B and $3F];
-      B := B shr 6;
-      OutPtr^.b1 := umlBase64_ENCODE_TABLE[B];
+      OutPtr^.b4 := umlBase64_ENCODE_TABLE[b and $3F];
+      b := b shr 6;
+      OutPtr^.b3 := umlBase64_ENCODE_TABLE[b and $3F];
+      b := b shr 6;
+      OutPtr^.b2 := umlBase64_ENCODE_TABLE[b and $3F];
+      b := b shr 6;
+      OutPtr^.b1 := umlBase64_ENCODE_TABLE[b];
       Inc(OutPtr);
     end;
 
   case InputByteCount - InMax3 of
     1:
       begin
-        B := InPtr^;
-        B := B shl 4;
-        OutPtr^.b2 := umlBase64_ENCODE_TABLE[B and $3F];
-        B := B shr 6;
-        OutPtr^.b1 := umlBase64_ENCODE_TABLE[B];
+        b := InPtr^;
+        b := b shl 4;
+        OutPtr^.b2 := umlBase64_ENCODE_TABLE[b and $3F];
+        b := b shr 6;
+        OutPtr^.b1 := umlBase64_ENCODE_TABLE[b];
         OutPtr^.b3 := EQUAL_SIGN;
         OutPtr^.b4 := EQUAL_SIGN;
       end;
     2:
       begin
-        B := InPtr^;
+        b := InPtr^;
         Inc(InPtr);
-        B := B shl 8;
-        B := B or InPtr^;
-        B := B shl 2;
-        OutPtr^.b3 := umlBase64_ENCODE_TABLE[B and $3F];
-        B := B shr 6;
-        OutPtr^.b2 := umlBase64_ENCODE_TABLE[B and $3F];
-        B := B shr 6;
-        OutPtr^.b1 := umlBase64_ENCODE_TABLE[B];
+        b := b shl 8;
+        b := b or InPtr^;
+        b := b shl 2;
+        OutPtr^.b3 := umlBase64_ENCODE_TABLE[b and $3F];
+        b := b shr 6;
+        OutPtr^.b2 := umlBase64_ENCODE_TABLE[b and $3F];
+        b := b shr 6;
+        OutPtr^.b1 := umlBase64_ENCODE_TABLE[b];
         OutPtr^.b4 := EQUAL_SIGN;
       end;
   end;
@@ -3218,29 +3534,29 @@ end;
 
 procedure umlDecodeLineBASE64(Buffer: umlString; var Output: umlString);
 var
-  B, nb: TBytes;
+  b, nb: TBytes;
 begin
-  B := umlBytesOf(Buffer);
-  umlBase64DecodeBytes(B, nb);
+  b := umlBytesOf(Buffer);
+  umlBase64DecodeBytes(b, nb);
   Output := umlStringOf(nb);
 end;
 
 procedure umlEncodeLineBASE64(Buffer: umlString; var Output: umlString);
 var
-  B, nb: TBytes;
+  b, nb: TBytes;
 begin
-  B := umlBytesOf(Buffer);
-  umlBase64EncodeBytes(B, nb);
+  b := umlBytesOf(Buffer);
+  umlBase64EncodeBytes(b, nb);
   Output := umlStringOf(nb);
 end;
 
 procedure umlDecodeStreamBASE64(Buffer: umlString; Output: TCoreClassStream);
 var
-  B, nb: TBytes;
+  b, nb: TBytes;
   bak  : Int64;
 begin
-  B := umlBytesOf(Buffer);
-  umlBase64DecodeBytes(B, nb);
+  b := umlBytesOf(Buffer);
+  umlBase64DecodeBytes(b, nb);
   bak := Output.Position;
   Output.WriteBuffer(nb[0], Length(nb));
   Output.Position := bak;
@@ -3248,15 +3564,15 @@ end;
 
 procedure umlEncodeStreamBASE64(Buffer: TCoreClassStream; var Output: umlString);
 var
-  B, nb: TBytes;
+  b, nb: TBytes;
   bak  : Int64;
 begin
   bak := Buffer.Position;
 
   Buffer.Position := 0;
-  SetLength(B, Buffer.Size);
-  Buffer.ReadBuffer(B[0], Buffer.Size);
-  umlBase64EncodeBytes(B, nb);
+  SetLength(b, Buffer.Size);
+  Buffer.ReadBuffer(b[0], Buffer.Size);
+  umlBase64EncodeBytes(b, nb);
   Output := umlStringOf(nb);
 
   Buffer.Position := bak;
@@ -3288,269 +3604,173 @@ begin
       Output.Append('''' + ';');
 end;
 
-function umlMD5(const BuffPtr: PBYTE; const BuffSize: NativeUInt): TMD5;
+procedure umlTransformMD5(var Accu; var buf); inline;
+  function ROL(const x: Cardinal; const n: Byte): Cardinal; inline;
+  begin
+    Result := (x shl n) or (x shr (32 - n))
+  end;
+
+  function FF(const a, b, c, d, x: Cardinal; const S: Byte; const ac: Cardinal): Cardinal; inline;
+  begin
+    Result := ROL(a + x + ac + (b and c or not b and d), S) + b
+  end;
+
+  function GG(const a, b, c, d, x: Cardinal; const S: Byte; const ac: Cardinal): Cardinal; inline;
+  begin
+    Result := ROL(a + x + ac + (b and d or c and not d), S) + b
+  end;
+
+  function HH(const a, b, c, d, x: Cardinal; const S: Byte; const ac: Cardinal): Cardinal; inline;
+  begin
+    Result := ROL(a + x + ac + (b xor c xor d), S) + b
+  end;
+
+  function II(const a, b, c, d, x: Cardinal; const S: Byte; const ac: Cardinal): Cardinal; inline;
+  begin
+    Result := ROL(a + x + ac + (c xor (b or not d)), S) + b
+  end;
+
 type
-  TDWordArray = array [0 .. MaxInt div SizeOf(DWORD) - 1] of DWORD;
-  PDWordArray = ^TDWordArray;
-
-const
-  S11 = 7;
-  S12 = 12;
-  S13 = 17;
-  S14 = 22;
-
-  S21 = 5;
-  S22 = 9;
-  S23 = 14;
-  S24 = 20;
-
-  S31 = 4;
-  S32 = 11;
-  S33 = 16;
-  S34 = 23;
-
-  S41 = 6;
-  S42 = 10;
-  S43 = 15;
-  S44 = 21;
-
+  TDigestCardinal = array [0 .. 3] of Cardinal;
+  TCardinalBuf    = array [0 .. 15] of Cardinal;
 var
-  ContextCount : array [0 .. 1] of DWORD;
-  ContextState : array [0 .. 4] of DWORD;
-  ContextBuffer: array [0 .. 63] of Byte;
-  Padding      : array [0 .. 63] of Byte;
-
-  procedure Encode(const Dst: PByteArray; const Src: PDWordArray; const Count: NativeUInt); inline;
-  var
-    i, j: NativeUInt;
-  begin
-    i := 0;
-    j := 0;
-    while (j < Count) do
-      begin
-        Dst^[j] := Src^[i] and $FF;
-        Dst^[j + 1] := (Src^[i] shr 8) and $FF;
-        Dst^[j + 2] := (Src^[i] shr 16) and $FF;
-        Dst^[j + 3] := (Src^[i] shr 24) and $FF;
-        Inc(j, 4);
-        Inc(i);
-      end;
-  end;
-  procedure Decode(const Dst: PDWordArray; const Src: PByteArray; const Count, Shift: NativeUInt); inline;
-  var
-    i, j: NativeUInt;
-  begin
-    j := 0;
-    i := 0;
-    while (j < Count) do
-      begin
-        Dst^[i] := (
-          (Src^[j + Shift] and $FF) or
-          ((Src^[j + Shift + 1] and $FF) shl 8) or
-          ((Src^[j + Shift + 2] and $FF) shl 16) or
-          ((Src^[j + Shift + 3] and $FF) shl 24)
-          );
-        Inc(j, 4);
-        Inc(i);
-      end;
-  end;
-
-  procedure Transform(const Block: PByteArray; const Shift: NativeUInt);
-    function f(const x, y, z: DWORD): DWORD; inline;
-    begin
-      Result := (x and y) or ((not x) and z);
-    end;
-    function G(const x, y, z: DWORD): DWORD; inline;
-    begin
-      Result := (x and z) or (y and (not z));
-    end;
-    function H(const x, y, z: DWORD): DWORD; inline;
-    begin
-      Result := x xor y xor z;
-    end;
-    function i(const x, y, z: DWORD): DWORD; inline;
-    begin
-      Result := y xor (x or (not z));
-    end;
-    procedure RL(var x: DWORD; const n: Byte); inline;
-    begin
-      x := (x shl n) or (x shr (32 - n));
-    end;
-    procedure FF(var a: DWORD; const B, c, d, x: DWORD; const S: Byte; const ac: DWORD); inline;
-    begin
-      Inc(a, f(B, c, d) + x + ac);
-      RL(a, S);
-      Inc(a, B);
-    end;
-    procedure GG(var a: DWORD; const B, c, d, x: DWORD; const S: Byte; const ac: DWORD); inline;
-    begin
-      Inc(a, G(B, c, d) + x + ac);
-      RL(a, S);
-      Inc(a, B);
-    end;
-    procedure HH(var a: DWORD; const B, c, d, x: DWORD; const S: Byte; const ac: DWORD); inline;
-    begin
-      Inc(a, H(B, c, d) + x + ac);
-      RL(a, S);
-      Inc(a, B);
-    end;
-    procedure II(var a: DWORD; const B, c, d, x: DWORD; const S: Byte; const ac: DWORD); inline;
-    begin
-      Inc(a, i(B, c, d) + x + ac);
-      RL(a, S);
-      Inc(a, B);
-    end;
-
-  var
-    a, B, c, d: DWORD;
-  var
-    x: array [0 .. 15] of DWORD;
-  begin
-    a := ContextState[0];
-    B := ContextState[1];
-    c := ContextState[2];
-    d := ContextState[3];
-    Decode(@x[0], Block, 64, Shift);
-    // Round 1
-    FF(a, B, c, d, x[0], S11, $D76AA478);  { 1 }
-    FF(d, a, B, c, x[1], S12, $E8C7B756);  { 2 }
-    FF(c, d, a, B, x[2], S13, $242070DB);  { 3 }
-    FF(B, c, d, a, x[3], S14, $C1BDCEEE);  { 4 }
-    FF(a, B, c, d, x[4], S11, $F57C0FAF);  { 5 }
-    FF(d, a, B, c, x[5], S12, $4787C62A);  { 6 }
-    FF(c, d, a, B, x[6], S13, $A8304613);  { 7 }
-    FF(B, c, d, a, x[7], S14, $FD469501);  { 8 }
-    FF(a, B, c, d, x[8], S11, $698098D8);  { 9 }
-    FF(d, a, B, c, x[9], S12, $8B44F7AF);  { 10 }
-    FF(c, d, a, B, x[10], S13, $FFFF5BB1); { 11 }
-    FF(B, c, d, a, x[11], S14, $895CD7BE); { 12 }
-    FF(a, B, c, d, x[12], S11, $6B901122); { 13 }
-    FF(d, a, B, c, x[13], S12, $FD987193); { 14 }
-    FF(c, d, a, B, x[14], S13, $A679438E); { 15 }
-    FF(B, c, d, a, x[15], S14, $49B40821); { 16 }
-    // Round 2
-    GG(a, B, c, d, x[1], S21, $F61E2562);  { 17 }
-    GG(d, a, B, c, x[6], S22, $C040B340);  { 18 }
-    GG(c, d, a, B, x[11], S23, $265E5A51); { 19 }
-    GG(B, c, d, a, x[0], S24, $E9B6C7AA);  { 20 }
-    GG(a, B, c, d, x[5], S21, $D62F105D);  { 21 }
-    GG(d, a, B, c, x[10], S22, $2441453);  { 22 }
-    GG(c, d, a, B, x[15], S23, $D8A1E681); { 23 }
-    GG(B, c, d, a, x[4], S24, $E7D3FBC8);  { 24 }
-    GG(a, B, c, d, x[9], S21, $21E1CDE6);  { 25 }
-    GG(d, a, B, c, x[14], S22, $C33707D6); { 26 }
-    GG(c, d, a, B, x[3], S23, $F4D50D87);  { 27 }
-    GG(B, c, d, a, x[8], S24, $455A14ED);  { 28 }
-    GG(a, B, c, d, x[13], S21, $A9E3E905); { 29 }
-    GG(d, a, B, c, x[2], S22, $FCEFA3F8);  { 30 }
-    GG(c, d, a, B, x[7], S23, $676F02D9);  { 31 }
-    GG(B, c, d, a, x[12], S24, $8D2A4C8A); { 32 }
-    // Round 3
-    HH(a, B, c, d, x[5], S31, $FFFA3942);  { 33 }
-    HH(d, a, B, c, x[8], S32, $8771F681);  { 34 }
-    HH(c, d, a, B, x[11], S33, $6D9D6122); { 35 }
-    HH(B, c, d, a, x[14], S34, $FDE5380C); { 36 }
-    HH(a, B, c, d, x[1], S31, $A4BEEA44);  { 37 }
-    HH(d, a, B, c, x[4], S32, $4BDECFA9);  { 38 }
-    HH(c, d, a, B, x[7], S33, $F6BB4B60);  { 39 }
-    HH(B, c, d, a, x[10], S34, $BEBFBC70); { 40 }
-    HH(a, B, c, d, x[13], S31, $289B7EC6); { 41 }
-    HH(d, a, B, c, x[0], S32, $EAA127FA);  { 42 }
-    HH(c, d, a, B, x[3], S33, $D4EF3085);  { 43 }
-    HH(B, c, d, a, x[6], S34, $4881D05);   { 44 }
-    HH(a, B, c, d, x[9], S31, $D9D4D039);  { 45 }
-    HH(d, a, B, c, x[12], S32, $E6DB99E5); { 46 }
-    HH(c, d, a, B, x[15], S33, $1FA27CF8); { 47 }
-    HH(B, c, d, a, x[2], S34, $C4AC5665);  { 48 }
-    // Round 4
-    II(a, B, c, d, x[0], S41, $F4292244);  { 49 }
-    II(d, a, B, c, x[7], S42, $432AFF97);  { 50 }
-    II(c, d, a, B, x[14], S43, $AB9423A7); { 51 }
-    II(B, c, d, a, x[5], S44, $FC93A039);  { 52 }
-    II(a, B, c, d, x[12], S41, $655B59C3); { 53 }
-    II(d, a, B, c, x[3], S42, $8F0CCC92);  { 54 }
-    II(c, d, a, B, x[10], S43, $FFEFF47D); { 55 }
-    II(B, c, d, a, x[1], S44, $85845DD1);  { 56 }
-    II(a, B, c, d, x[8], S41, $6FA87E4F);  { 57 }
-    II(d, a, B, c, x[15], S42, $FE2CE6E0); { 58 }
-    II(c, d, a, B, x[6], S43, $A3014314);  { 59 }
-    II(B, c, d, a, x[13], S44, $4E0811A1); { 60 }
-    II(a, B, c, d, x[4], S41, $F7537E82);  { 61 }
-    II(d, a, B, c, x[11], S42, $BD3AF235); { 62 }
-    II(c, d, a, B, x[2], S43, $2AD7D2BB);  { 63 }
-    II(B, c, d, a, x[9], S44, $EB86D391);  { 64 }
-
-    Inc(ContextState[0], a);
-    Inc(ContextState[1], B);
-    Inc(ContextState[2], c);
-    Inc(ContextState[3], d);
-  end;
-  procedure Update(const Value: PBYTE; const Count: NativeUInt);
-  var
-    i, Index, PartLen, Start: NativeUInt;
-  var
-    pb: PByteArray;
-  begin
-    pb := PByteArray(Value);
-    index := (ContextCount[0] shr 3) and $3F;
-
-    Inc(ContextCount[0], Count shl 3);
-    if ContextCount[0] < (Count shl 3) then
-        Inc(ContextCount[1]);
-
-    Inc(ContextCount[1], Count shr (SizeOf(Count) * 8 - 3));
-
-    PartLen := 64 - index;
-    if Count >= PartLen then
-      begin
-        for i := 0 to PartLen - 1 do
-            ContextBuffer[i + index] := pb^[i];
-
-        Transform(@ContextBuffer, 0);
-        i := PartLen;
-        while (i + 63) < Count do
-          begin
-            Transform(pb, i);
-            Inc(i, 64);
-          end;
-        index := 0;
-      end
-    else
-        i := 0;
-    if (i < Count) then
-      begin
-        Start := i;
-        while (i < Count) do
-          begin
-            ContextBuffer[index + i - Start] := pb^[i];
-            Inc(i);
-          end;
-      end;
-  end;
-
-var
-  Bits         : array [0 .. 7] of Byte;
-  Index, PadLen: NativeUInt;
+  a, b, c, d: Cardinal;
 begin
-  FillByte(Padding, 64, 0);
-  Padding[0] := $80;
-  ContextCount[0] := 0;
-  ContextCount[1] := 0;
-  ContextState[0] := $67452301;
-  ContextState[1] := $EFCDAB89;
-  ContextState[2] := $98BADCFE;
-  ContextState[3] := $10325476;
-  Update(BuffPtr, BuffSize);
-  Encode(@Bits, @ContextCount, 8);
-  index := (ContextCount[0] shr 3) and $3F;
-  if index < 56 then
-      PadLen := 56 - index
-  else
-      PadLen := 120 - index;
-  Update(@Padding, PadLen);
-  Update(@Bits, 8);
-  Encode(@Result, @ContextState, 16);
+  a := TDigestCardinal(Accu)[0];
+  b := TDigestCardinal(Accu)[1];
+  c := TDigestCardinal(Accu)[2];
+  d := TDigestCardinal(Accu)[3];
+
+  a := FF(a, b, c, d, TCardinalBuf(buf)[0], 7, $D76AA478);   { 1 }
+  d := FF(d, a, b, c, TCardinalBuf(buf)[1], 12, $E8C7B756);  { 2 }
+  c := FF(c, d, a, b, TCardinalBuf(buf)[2], 17, $242070DB);  { 3 }
+  b := FF(b, c, d, a, TCardinalBuf(buf)[3], 22, $C1BDCEEE);  { 4 }
+  a := FF(a, b, c, d, TCardinalBuf(buf)[4], 7, $F57C0FAF);   { 5 }
+  d := FF(d, a, b, c, TCardinalBuf(buf)[5], 12, $4787C62A);  { 6 }
+  c := FF(c, d, a, b, TCardinalBuf(buf)[6], 17, $A8304613);  { 7 }
+  b := FF(b, c, d, a, TCardinalBuf(buf)[7], 22, $FD469501);  { 8 }
+  a := FF(a, b, c, d, TCardinalBuf(buf)[8], 7, $698098D8);   { 9 }
+  d := FF(d, a, b, c, TCardinalBuf(buf)[9], 12, $8B44F7AF);  { 10 }
+  c := FF(c, d, a, b, TCardinalBuf(buf)[10], 17, $FFFF5BB1); { 11 }
+  b := FF(b, c, d, a, TCardinalBuf(buf)[11], 22, $895CD7BE); { 12 }
+  a := FF(a, b, c, d, TCardinalBuf(buf)[12], 7, $6B901122);  { 13 }
+  d := FF(d, a, b, c, TCardinalBuf(buf)[13], 12, $FD987193); { 14 }
+  c := FF(c, d, a, b, TCardinalBuf(buf)[14], 17, $A679438E); { 15 }
+  b := FF(b, c, d, a, TCardinalBuf(buf)[15], 22, $49B40821); { 16 }
+
+  a := GG(a, b, c, d, TCardinalBuf(buf)[1], 5, $F61E2562);   { 17 }
+  d := GG(d, a, b, c, TCardinalBuf(buf)[6], 9, $C040B340);   { 18 }
+  c := GG(c, d, a, b, TCardinalBuf(buf)[11], 14, $265E5A51); { 19 }
+  b := GG(b, c, d, a, TCardinalBuf(buf)[0], 20, $E9B6C7AA);  { 20 }
+  a := GG(a, b, c, d, TCardinalBuf(buf)[5], 5, $D62F105D);   { 21 }
+  d := GG(d, a, b, c, TCardinalBuf(buf)[10], 9, $02441453);  { 22 }
+  c := GG(c, d, a, b, TCardinalBuf(buf)[15], 14, $D8A1E681); { 23 }
+  b := GG(b, c, d, a, TCardinalBuf(buf)[4], 20, $E7D3FBC8);  { 24 }
+  a := GG(a, b, c, d, TCardinalBuf(buf)[9], 5, $21E1CDE6);   { 25 }
+  d := GG(d, a, b, c, TCardinalBuf(buf)[14], 9, $C33707D6);  { 26 }
+  c := GG(c, d, a, b, TCardinalBuf(buf)[3], 14, $F4D50D87);  { 27 }
+  b := GG(b, c, d, a, TCardinalBuf(buf)[8], 20, $455A14ED);  { 28 }
+  a := GG(a, b, c, d, TCardinalBuf(buf)[13], 5, $A9E3E905);  { 29 }
+  d := GG(d, a, b, c, TCardinalBuf(buf)[2], 9, $FCEFA3F8);   { 30 }
+  c := GG(c, d, a, b, TCardinalBuf(buf)[7], 14, $676F02D9);  { 31 }
+  b := GG(b, c, d, a, TCardinalBuf(buf)[12], 20, $8D2A4C8A); { 32 }
+
+  a := HH(a, b, c, d, TCardinalBuf(buf)[5], 4, $FFFA3942);   { 33 }
+  d := HH(d, a, b, c, TCardinalBuf(buf)[8], 11, $8771F681);  { 34 }
+  c := HH(c, d, a, b, TCardinalBuf(buf)[11], 16, $6D9D6122); { 35 }
+  b := HH(b, c, d, a, TCardinalBuf(buf)[14], 23, $FDE5380C); { 36 }
+  a := HH(a, b, c, d, TCardinalBuf(buf)[1], 4, $A4BEEA44);   { 37 }
+  d := HH(d, a, b, c, TCardinalBuf(buf)[4], 11, $4BDECFA9);  { 38 }
+  c := HH(c, d, a, b, TCardinalBuf(buf)[7], 16, $F6BB4B60);  { 39 }
+  b := HH(b, c, d, a, TCardinalBuf(buf)[10], 23, $BEBFBC70); { 40 }
+  a := HH(a, b, c, d, TCardinalBuf(buf)[13], 4, $289B7EC6);  { 41 }
+  d := HH(d, a, b, c, TCardinalBuf(buf)[0], 11, $EAA127FA);  { 42 }
+  c := HH(c, d, a, b, TCardinalBuf(buf)[3], 16, $D4EF3085);  { 43 }
+  b := HH(b, c, d, a, TCardinalBuf(buf)[6], 23, $04881D05);  { 44 }
+  a := HH(a, b, c, d, TCardinalBuf(buf)[9], 4, $D9D4D039);   { 45 }
+  d := HH(d, a, b, c, TCardinalBuf(buf)[12], 11, $E6DB99E5); { 46 }
+  c := HH(c, d, a, b, TCardinalBuf(buf)[15], 16, $1FA27CF8); { 47 }
+  b := HH(b, c, d, a, TCardinalBuf(buf)[2], 23, $C4AC5665);  { 48 }
+
+  a := II(a, b, c, d, TCardinalBuf(buf)[0], 6, $F4292244);   { 49 }
+  d := II(d, a, b, c, TCardinalBuf(buf)[7], 10, $432AFF97);  { 50 }
+  c := II(c, d, a, b, TCardinalBuf(buf)[14], 15, $AB9423A7); { 51 }
+  b := II(b, c, d, a, TCardinalBuf(buf)[5], 21, $FC93A039);  { 52 }
+  a := II(a, b, c, d, TCardinalBuf(buf)[12], 6, $655B59C3);  { 53 }
+  d := II(d, a, b, c, TCardinalBuf(buf)[3], 10, $8F0CCC92);  { 54 }
+  c := II(c, d, a, b, TCardinalBuf(buf)[10], 15, $FFEFF47D); { 55 }
+  b := II(b, c, d, a, TCardinalBuf(buf)[1], 21, $85845DD1);  { 56 }
+  a := II(a, b, c, d, TCardinalBuf(buf)[8], 6, $6FA87E4F);   { 57 }
+  d := II(d, a, b, c, TCardinalBuf(buf)[15], 10, $FE2CE6E0); { 58 }
+  c := II(c, d, a, b, TCardinalBuf(buf)[6], 15, $A3014314);  { 59 }
+  b := II(b, c, d, a, TCardinalBuf(buf)[13], 21, $4E0811A1); { 60 }
+  a := II(a, b, c, d, TCardinalBuf(buf)[4], 6, $F7537E82);   { 61 }
+  d := II(d, a, b, c, TCardinalBuf(buf)[11], 10, $BD3AF235); { 62 }
+  c := II(c, d, a, b, TCardinalBuf(buf)[2], 15, $2AD7D2BB);  { 63 }
+  b := II(b, c, d, a, TCardinalBuf(buf)[9], 21, $EB86D391);  { 64 }
+
+  Inc(TDigestCardinal(Accu)[0], a);
+  Inc(TDigestCardinal(Accu)[1], b);
+  Inc(TDigestCardinal(Accu)[2], c);
+  Inc(TDigestCardinal(Accu)[3], d)
 end;
+
+function umlMD5(const BuffPtr: PBYTE; BufSiz: NativeUInt): TMD5;
+{$IF Defined(FastMD5) and Defined(Delphi) and (Defined(WIN32) or Defined(WIN64))}
+begin
+  Result := FastMD5(BuffPtr, BufSiz);
+end;
+{$ELSE}
+
+
+var
+  digest : TMD5;
+  Lo, Hi : Cardinal;
+  p      : PBYTE;
+  WorkLen: Byte;
+  WorkBuf: array [0 .. 63] of Byte;
+begin
+  Lo := 0;
+  Hi := 0;
+  PCardinal(@digest[0])^ := $67452301;
+  PCardinal(@digest[4])^ := $EFCDAB89;
+  PCardinal(@digest[8])^ := $98BADCFE;
+  PCardinal(@digest[12])^ := $10325476;
+
+  if BufSiz shl 3 < 0 then
+      Inc(Hi);
+
+  Inc(Lo, BufSiz shl 3);
+  Inc(Hi, BufSiz shr 29);
+
+  p := BuffPtr;
+
+  while BufSiz >= $40 do
+    begin
+      umlTransformMD5(digest, p^);
+      Inc(p, $40);
+      Dec(BufSiz, $40);
+    end;
+  if BufSiz > 0 then
+      CopyPtr(p, @WorkBuf[0], BufSiz);
+
+  Result := PMD5(@digest[0])^;
+  WorkBuf[BufSiz] := $80;
+  WorkLen := BufSiz + 1;
+  if WorkLen > $38 then
+    begin
+      if WorkLen < $40 then
+          FillPtrByte(@WorkBuf[WorkLen], $40 - WorkLen, 0);
+      umlTransformMD5(Result, WorkBuf);
+      WorkLen := 0
+    end;
+  FillPtrByte(@WorkBuf[WorkLen], $38 - WorkLen, 0);
+  PCardinal(@WorkBuf[$38])^ := Lo;
+  PCardinal(@WorkBuf[$3C])^ := Hi;
+  umlTransformMD5(Result, WorkBuf);
+end;
+{$IFEND}
+
 
 function umlMD5Char(const BuffPtr: PBYTE; const BuffSize: NativeUInt): umlString;
 begin
@@ -3563,349 +3783,104 @@ begin
 end;
 
 function umlStreamMD5(Stream: TCoreClassStream; StartPos, EndPos: Int64): TMD5;
-type
-  TDWordArray = array [0 .. MaxInt div SizeOf(DWORD) - 1] of DWORD;
-  PDWordArray = ^TDWordArray;
+{$IF Defined(FastMD5) and Defined(Delphi) and (Defined(WIN32) or Defined(WIN64))}
+begin
+  Result := FastMD5(Stream, StartPos, EndPos);
+end;
+{$ELSE}
+
 
 const
-  S11 = 7;
-  S12 = 12;
-  S13 = 17;
-  S14 = 22;
-
-  S21 = 5;
-  S22 = 9;
-  S23 = 14;
-  S24 = 20;
-
-  S31 = 4;
-  S32 = 11;
-  S33 = 16;
-  S34 = 23;
-
-  S41 = 6;
-  S42 = 10;
-  S43 = 15;
-  S44 = 21;
+  deltaSize = $40 * $FFFF;
 
 var
-  ContextCount : array [0 .. 1] of DWORD;
-  ContextState : array [0 .. 4] of DWORD;
-  ContextBuffer: array [0 .. 63] of Byte;
-  Padding      : array [0 .. 63] of Byte;
-
-  procedure Encode(const Dst: PByteArray; const Src: PDWordArray; const Count: NativeUInt); inline;
-  var
-    i, j: NativeUInt;
-  begin
-    i := 0;
-    j := 0;
-    while (j < Count) do
-      begin
-        Dst^[j] := Src^[i] and $FF;
-        Dst^[j + 1] := (Src^[i] shr 8) and $FF;
-        Dst^[j + 2] := (Src^[i] shr 16) and $FF;
-        Dst^[j + 3] := (Src^[i] shr 24) and $FF;
-        Inc(j, 4);
-        Inc(i);
-      end;
-  end;
-  procedure Decode(const Dst: PDWordArray; const Src: PByteArray; const Count, Shift: NativeUInt); inline;
-  var
-    i, j: NativeUInt;
-  begin
-    j := 0;
-    i := 0;
-    while (j < Count) do
-      begin
-        Dst^[i] := (
-          (Src^[j + Shift] and $FF) or
-          ((Src^[j + Shift + 1] and $FF) shl 8) or
-          ((Src^[j + Shift + 2] and $FF) shl 16) or
-          ((Src^[j + Shift + 3] and $FF) shl 24)
-          );
-        Inc(j, 4);
-        Inc(i);
-      end;
-  end;
-
-  procedure Transform(const Block: PByteArray; const Shift: NativeUInt);
-    function f(const x, y, z: DWORD): DWORD; inline;
-    begin
-      Result := (x and y) or ((not x) and z);
-    end;
-    function G(const x, y, z: DWORD): DWORD; inline;
-    begin
-      Result := (x and z) or (y and (not z));
-    end;
-    function H(const x, y, z: DWORD): DWORD; inline;
-    begin
-      Result := x xor y xor z;
-    end;
-    function i(const x, y, z: DWORD): DWORD; inline;
-    begin
-      Result := y xor (x or (not z));
-    end;
-    procedure RL(var x: DWORD; const n: Byte); inline;
-    begin
-      x := (x shl n) or (x shr (32 - n));
-    end;
-    procedure FF(var a: DWORD; const B, c, d, x: DWORD; const S: Byte; const ac: DWORD); inline;
-    begin
-      Inc(a, f(B, c, d) + x + ac);
-      RL(a, S);
-      Inc(a, B);
-    end;
-    procedure GG(var a: DWORD; const B, c, d, x: DWORD; const S: Byte; const ac: DWORD); inline;
-    begin
-      Inc(a, G(B, c, d) + x + ac);
-      RL(a, S);
-      Inc(a, B);
-    end;
-    procedure HH(var a: DWORD; const B, c, d, x: DWORD; const S: Byte; const ac: DWORD); inline;
-    begin
-      Inc(a, H(B, c, d) + x + ac);
-      RL(a, S);
-      Inc(a, B);
-    end;
-    procedure II(var a: DWORD; const B, c, d, x: DWORD; const S: Byte; const ac: DWORD); inline;
-    begin
-      Inc(a, i(B, c, d) + x + ac);
-      RL(a, S);
-      Inc(a, B);
-    end;
-
-  var
-    a, B, c, d: DWORD;
-  var
-    x: array [0 .. 15] of DWORD;
-  begin
-    a := ContextState[0];
-    B := ContextState[1];
-    c := ContextState[2];
-    d := ContextState[3];
-    Decode(@x[0], Block, 64, Shift);
-    // Round 1
-    FF(a, B, c, d, x[0], S11, $D76AA478);  { 1 }
-    FF(d, a, B, c, x[1], S12, $E8C7B756);  { 2 }
-    FF(c, d, a, B, x[2], S13, $242070DB);  { 3 }
-    FF(B, c, d, a, x[3], S14, $C1BDCEEE);  { 4 }
-    FF(a, B, c, d, x[4], S11, $F57C0FAF);  { 5 }
-    FF(d, a, B, c, x[5], S12, $4787C62A);  { 6 }
-    FF(c, d, a, B, x[6], S13, $A8304613);  { 7 }
-    FF(B, c, d, a, x[7], S14, $FD469501);  { 8 }
-    FF(a, B, c, d, x[8], S11, $698098D8);  { 9 }
-    FF(d, a, B, c, x[9], S12, $8B44F7AF);  { 10 }
-    FF(c, d, a, B, x[10], S13, $FFFF5BB1); { 11 }
-    FF(B, c, d, a, x[11], S14, $895CD7BE); { 12 }
-    FF(a, B, c, d, x[12], S11, $6B901122); { 13 }
-    FF(d, a, B, c, x[13], S12, $FD987193); { 14 }
-    FF(c, d, a, B, x[14], S13, $A679438E); { 15 }
-    FF(B, c, d, a, x[15], S14, $49B40821); { 16 }
-    // Round 2
-    GG(a, B, c, d, x[1], S21, $F61E2562);  { 17 }
-    GG(d, a, B, c, x[6], S22, $C040B340);  { 18 }
-    GG(c, d, a, B, x[11], S23, $265E5A51); { 19 }
-    GG(B, c, d, a, x[0], S24, $E9B6C7AA);  { 20 }
-    GG(a, B, c, d, x[5], S21, $D62F105D);  { 21 }
-    GG(d, a, B, c, x[10], S22, $2441453);  { 22 }
-    GG(c, d, a, B, x[15], S23, $D8A1E681); { 23 }
-    GG(B, c, d, a, x[4], S24, $E7D3FBC8);  { 24 }
-    GG(a, B, c, d, x[9], S21, $21E1CDE6);  { 25 }
-    GG(d, a, B, c, x[14], S22, $C33707D6); { 26 }
-    GG(c, d, a, B, x[3], S23, $F4D50D87);  { 27 }
-    GG(B, c, d, a, x[8], S24, $455A14ED);  { 28 }
-    GG(a, B, c, d, x[13], S21, $A9E3E905); { 29 }
-    GG(d, a, B, c, x[2], S22, $FCEFA3F8);  { 30 }
-    GG(c, d, a, B, x[7], S23, $676F02D9);  { 31 }
-    GG(B, c, d, a, x[12], S24, $8D2A4C8A); { 32 }
-    // Round 3
-    HH(a, B, c, d, x[5], S31, $FFFA3942);  { 33 }
-    HH(d, a, B, c, x[8], S32, $8771F681);  { 34 }
-    HH(c, d, a, B, x[11], S33, $6D9D6122); { 35 }
-    HH(B, c, d, a, x[14], S34, $FDE5380C); { 36 }
-    HH(a, B, c, d, x[1], S31, $A4BEEA44);  { 37 }
-    HH(d, a, B, c, x[4], S32, $4BDECFA9);  { 38 }
-    HH(c, d, a, B, x[7], S33, $F6BB4B60);  { 39 }
-    HH(B, c, d, a, x[10], S34, $BEBFBC70); { 40 }
-    HH(a, B, c, d, x[13], S31, $289B7EC6); { 41 }
-    HH(d, a, B, c, x[0], S32, $EAA127FA);  { 42 }
-    HH(c, d, a, B, x[3], S33, $D4EF3085);  { 43 }
-    HH(B, c, d, a, x[6], S34, $4881D05);   { 44 }
-    HH(a, B, c, d, x[9], S31, $D9D4D039);  { 45 }
-    HH(d, a, B, c, x[12], S32, $E6DB99E5); { 46 }
-    HH(c, d, a, B, x[15], S33, $1FA27CF8); { 47 }
-    HH(B, c, d, a, x[2], S34, $C4AC5665);  { 48 }
-    // Round 4
-    II(a, B, c, d, x[0], S41, $F4292244);  { 49 }
-    II(d, a, B, c, x[7], S42, $432AFF97);  { 50 }
-    II(c, d, a, B, x[14], S43, $AB9423A7); { 51 }
-    II(B, c, d, a, x[5], S44, $FC93A039);  { 52 }
-    II(a, B, c, d, x[12], S41, $655B59C3); { 53 }
-    II(d, a, B, c, x[3], S42, $8F0CCC92);  { 54 }
-    II(c, d, a, B, x[10], S43, $FFEFF47D); { 55 }
-    II(B, c, d, a, x[1], S44, $85845DD1);  { 56 }
-    II(a, B, c, d, x[8], S41, $6FA87E4F);  { 57 }
-    II(d, a, B, c, x[15], S42, $FE2CE6E0); { 58 }
-    II(c, d, a, B, x[6], S43, $A3014314);  { 59 }
-    II(B, c, d, a, x[13], S44, $4E0811A1); { 60 }
-    II(a, B, c, d, x[4], S41, $F7537E82);  { 61 }
-    II(d, a, B, c, x[11], S42, $BD3AF235); { 62 }
-    II(c, d, a, B, x[2], S43, $2AD7D2BB);  { 63 }
-    II(B, c, d, a, x[9], S44, $EB86D391);  { 64 }
-
-    Inc(ContextState[0], a);
-    Inc(ContextState[1], B);
-    Inc(ContextState[2], c);
-    Inc(ContextState[3], d);
-  end;
-
-  procedure Update(const Value: PBYTE; const Count: NativeUInt);
-  var
-    i, Index, PartLen, Start: NativeUInt;
-    pb                      : PByteArray;
-  begin
-    pb := PByteArray(Value);
-    index := (ContextCount[0] shr 3) and $3F;
-
-    Inc(ContextCount[0], Count shl 3);
-    if ContextCount[0] < (Count shl 3) then
-        Inc(ContextCount[1]);
-
-    Inc(ContextCount[1], Count shr (SizeOf(Count) * 8 - 3));
-
-    PartLen := 64 - index;
-    if Count >= PartLen then
-      begin
-        for i := 0 to PartLen - 1 do
-            ContextBuffer[i + index] := pb^[i];
-
-        Transform(@ContextBuffer, 0);
-        i := PartLen;
-        while (i + 63) < Count do
-          begin
-            Transform(pb, i);
-            Inc(i, 64);
-          end;
-        index := 0;
-      end
-    else
-        i := 0;
-    if (i < Count) then
-      begin
-        Start := i;
-        while (i < Count) do
-          begin
-            ContextBuffer[index + i - Start] := pb^[i];
-            Inc(i);
-          end;
-      end;
-  end;
-
-  procedure UpdateStreamBuffer();
-  var
-    i, Index, PartLen, Start      : Int64;
-    StreamSize, buffSiz, BuffStart: Int64;
-    buff                          : TBytes;
-  begin
-    StreamSize := EndPos - StartPos;
-
-    index := (ContextCount[0] shr 3) and $3F;
-
-    Inc(ContextCount[0], StreamSize shl 3);
-    if ContextCount[0] < (StreamSize shl 3) then
-        Inc(ContextCount[1]);
-
-    Inc(ContextCount[1], StreamSize shr 61);
-
-    // default size = 1M;
-    buffSiz := 1024 * 1024;
-
-    if StreamSize < buffSiz then
-        buffSiz := StreamSize;
-
-    SetLength(buff, buffSiz);
-
-    Stream.Position := StartPos;
-    Stream.Read(buff[0], buffSiz);
-
-    PartLen := 64 - index;
-    BuffStart := 0;
-
-    if StreamSize >= PartLen then
-      begin
-        for i := 0 to PartLen - 1 do
-            ContextBuffer[i + index] := buff[i];
-
-        Transform(@ContextBuffer, 0);
-        i := PartLen;
-        while (i + 63) < StreamSize do
-          begin
-            if BuffStart + 64 > buffSiz then
-              begin
-                Stream.Position := StartPos + i;
-                if Stream.Position + buffSiz > EndPos then
-                  begin
-                    FillByte(buff[0], buffSiz, 0);
-                    Stream.Read(buff[0], EndPos - Stream.Position);
-                  end
-                else
-                    Stream.Read(buff[0], buffSiz);
-                BuffStart := 0;
-              end;
-
-            Transform(@buff[0], BuffStart);
-            Inc(i, 64);
-            Inc(BuffStart, 64);
-          end;
-        index := 0;
-      end
-    else
-        i := 0;
-
-    if (i < StreamSize) then
-      begin
-        if BuffStart + (StreamSize - i) > buffSiz then
-          begin
-            Stream.Position := StartPos + i;
-            Stream.Read(buff[0], (StreamSize - i));
-            BuffStart := 0;
-          end;
-
-        Start := i;
-        while (i < StreamSize) do
-          begin
-            ContextBuffer[index + i - Start] := buff[BuffStart];
-            Inc(i);
-            Inc(BuffStart);
-          end;
-      end;
-  end;
-
-var
-  Bits         : array [0 .. 7] of Byte;
-  Index, PadLen: NativeUInt;
+  digest  : TMD5;
+  Lo, Hi  : Cardinal;
+  DeltaBuf: Pointer;
+  BufSiz  : Int64;
+  rest    : Cardinal;
+  p       : PBYTE;
+  WorkLen : Byte;
+  WorkBuf : array [0 .. 63] of Byte;
 begin
-  FillByte(Padding, 64, 0);
-  Padding[0] := $80;
-  ContextCount[0] := 0;
-  ContextCount[1] := 0;
-  ContextState[0] := $67452301;
-  ContextState[1] := $EFCDAB89;
-  ContextState[2] := $98BADCFE;
-  ContextState[3] := $10325476;
-  UpdateStreamBuffer;
-  // Update(BuffPtr, BuffSize);
-  Encode(@Bits, @ContextCount, 8);
-  index := (ContextCount[0] shr 3) and $3F;
-  if index < 56 then
-      PadLen := 56 - index
+  {$IFDEF OptimizationMemoryStreamMD5}
+  if Stream is TCoreClassMemoryStream then
+    begin
+      Result := umlMD5(Pointer(NativeUInt(TCoreClassMemoryStream(Stream).Memory) + StartPos), EndPos - StartPos);
+      Exit;
+    end;
+  if Stream is TMemoryStream64 then
+    begin
+      Result := umlMD5(TMemoryStream64(Stream).PositionAsPtr(StartPos), EndPos - StartPos);
+      Exit;
+    end;
+  {$IFEND}
+  //
+
+  Lo := 0;
+  Hi := 0;
+  PCardinal(@digest[0])^ := $67452301;
+  PCardinal(@digest[4])^ := $EFCDAB89;
+  PCardinal(@digest[8])^ := $98BADCFE;
+  PCardinal(@digest[12])^ := $10325476;
+
+  BufSiz := EndPos - StartPos;
+  rest := 0;
+
+  if BufSiz shl 3 < 0 then
+      Inc(Hi);
+
+  Inc(Lo, BufSiz shl 3);
+  Inc(Hi, BufSiz shr 29);
+
+  DeltaBuf := GetMemory(deltaSize);
+  Stream.Position := StartPos;
+
+  if BufSiz < $40 then
+    begin
+      Stream.Read(DeltaBuf^, BufSiz);
+      p := DeltaBuf;
+    end
   else
-      PadLen := 120 - index;
-  Update(@Padding, PadLen);
-  Update(@Bits, 8);
-  Encode(@Result, @ContextState, 16);
+    while BufSiz >= $40 do
+      begin
+        if rest = 0 then
+          begin
+            if BufSiz >= deltaSize then
+                rest := Stream.Read(DeltaBuf^, deltaSize)
+            else
+                rest := Stream.Read(DeltaBuf^, BufSiz);
+
+            p := DeltaBuf;
+          end;
+        umlTransformMD5(digest, p^);
+        Inc(p, $40);
+        Dec(BufSiz, $40);
+        Dec(rest, $40);
+      end;
+
+  if BufSiz > 0 then
+      CopyPtr(p, @WorkBuf[0], BufSiz);
+
+  FreeMemory(DeltaBuf);
+
+  Result := PMD5(@digest[0])^;
+  WorkBuf[BufSiz] := $80;
+  WorkLen := BufSiz + 1;
+  if WorkLen > $38 then
+    begin
+      if WorkLen < $40 then
+          FillPtrByte(@WorkBuf[WorkLen], $40 - WorkLen, 0);
+      umlTransformMD5(Result, WorkBuf);
+      WorkLen := 0
+    end;
+  FillPtrByte(@WorkBuf[WorkLen], $38 - WorkLen, 0);
+  PCardinal(@WorkBuf[$38])^ := Lo;
+  PCardinal(@WorkBuf[$3C])^ := Hi;
+  umlTransformMD5(Result, WorkBuf);
 end;
+{$IFEND}
+
 
 function umlStreamMD5(Stream: TCoreClassStream): TMD5;
 begin
@@ -3931,18 +3906,18 @@ end;
 
 function umlStringMD5(const Value: umlString): TMD5;
 var
-  B: TBytes;
+  b: TBytes;
 begin
-  B := umlBytesOf(Value);
-  Result := umlMD5(@B[0], Length(B));
+  b := umlBytesOf(Value);
+  Result := umlMD5(@b[0], Length(b));
 end;
 
 function umlStringMD5Char(const Value: umlString): umlString;
 var
-  B: TBytes;
+  b: TBytes;
 begin
-  B := umlBytesOf(Value);
-  Result := umlMD52Str(umlMD5(@B[0], Length(B)));
+  b := umlBytesOf(Value);
+  Result := umlMD52Str(umlMD5(@b[0], Length(b)));
 end;
 
 function umlMD52Str(md5: TMD5): umlString;
@@ -3983,10 +3958,19 @@ begin
   Result := (PUInt64(@m1[0])^ = PUInt64(@m2[0])^) and (PUInt64(@m1[8])^ = PUInt64(@m2[8])^);
 end;
 
+function umlIsNullMD5(m: TMD5): Boolean;
+begin
+  Result := umlCompareMD5(m, NullMD5);
+end;
+
+function umlWasNullMD5(m: TMD5): Boolean;
+begin
+  Result := umlCompareMD5(m, NullMD5);
+end;
+
 function umlCRC16(const Value: PBYTE; const Count: NativeUInt): Word;
 var
-  i: NativeUInt;
-var
+  i : NativeUInt;
   pb: PByteArray absolute Value;
 begin
   Result := 0;
@@ -3996,21 +3980,21 @@ end;
 
 function umlStringCRC16(const Value: umlString): Word;
 var
-  B: TBytes;
+  b: TBytes;
 begin
-  B := umlBytesOf(Value);
-  Result := umlCRC16(@B[0], Length(B));
+  b := umlBytesOf(Value);
+  Result := umlCRC16(@b[0], Length(b));
 end;
 
 function umlStreamCRC16(Stream: TMixedStream; StartPos, EndPos: Int64): Word;
 const
   ChunkSize = 1024 * 1024;
-  procedure CRC16BUpdate(var crc: Word; const Buf: Pointer; len: NativeUInt); inline;
+  procedure CRC16BUpdate(var crc: Word; const buf: Pointer; len: NativeUInt); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
     p: PBYTE;
     i: Integer;
   begin
-    p := Buf;
+    p := buf;
     for i := 0 to len - 1 do
       begin
         crc := (crc shr 8) xor CRC16Table[p^ xor (crc and $FF)];
@@ -4021,12 +4005,12 @@ const
 var
   j    : NativeUInt;
   Num  : NativeUInt;
-  Rest : NativeUInt;
-  Buf  : Pointer;
+  rest : NativeUInt;
+  buf  : Pointer;
   FSize: Int64;
 begin
   { Allocate buffer to read file }
-  Buf := GetMemory(ChunkSize);
+  buf := GetMemory(ChunkSize);
   { Initialize CRC }
   Result := 0;
 
@@ -4040,24 +4024,24 @@ begin
   { Calculate number of full chunks that will fit into the buffer }
   Num := EndPos div ChunkSize;
   { Calculate remaining bytes }
-  Rest := EndPos mod ChunkSize;
+  rest := EndPos mod ChunkSize;
 
   { Set the stream to the beginning of the file }
   Stream.Position := StartPos;
 
   { Process full chunks }
   for j := 0 to Num - 1 do begin
-      Stream.Read(Buf^, ChunkSize);
-      CRC16BUpdate(Result, Buf, ChunkSize);
+      Stream.Read(buf^, ChunkSize);
+      CRC16BUpdate(Result, buf, ChunkSize);
     end;
 
   { Process remaining bytes }
-  if Rest > 0 then begin
-      Stream.Read(Buf^, Rest);
-      CRC16BUpdate(Result, Buf, Rest);
+  if rest > 0 then begin
+      Stream.Read(buf^, rest);
+      CRC16BUpdate(Result, buf, rest);
     end;
 
-  FreeMem(Buf, ChunkSize);
+  FreeMem(buf, ChunkSize);
 end;
 
 function umlStreamCRC16(Stream: TMixedStream): Word;
@@ -4069,8 +4053,7 @@ end;
 
 function umlCRC32(const Value: PBYTE; const Count: NativeUInt): Cardinal;
 var
-  i: NativeUInt;
-var
+  i : NativeUInt;
   pb: PByteArray absolute Value;
 begin
   Result := $FFFFFFFF;
@@ -4081,22 +4064,22 @@ end;
 
 function umlString2CRC32(const Value: umlString): Cardinal;
 var
-  B: TBytes;
+  b: TBytes;
 begin
-  B := umlBytesOf(Value);
-  Result := umlCRC32(@B[0], Length(B));
+  b := umlBytesOf(Value);
+  Result := umlCRC32(@b[0], Length(b));
 end;
 
 function umlStreamCRC32(Stream: TMixedStream; StartPos, EndPos: Int64): Cardinal;
 const
   ChunkSize = 1024 * 1024;
 
-  procedure CRC32BUpdate(var crc: Cardinal; const Buf: Pointer; len: NativeUInt); inline;
+  procedure CRC32BUpdate(var crc: Cardinal; const buf: Pointer; len: NativeUInt); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
     p: PBYTE;
     i: Integer;
   begin
-    p := Buf;
+    p := buf;
     for i := 0 to len - 1 do
       begin
         crc := ((crc shr 8) and $00FFFFFF) xor CRC32Table[(crc xor p^) and $FF];
@@ -4107,12 +4090,12 @@ const
 var
   j    : NativeUInt;
   Num  : NativeUInt;
-  Rest : NativeUInt;
-  Buf  : Pointer;
+  rest : NativeUInt;
+  buf  : Pointer;
   FSize: Int64;
 begin
   { Allocate buffer to read file }
-  Buf := GetMemory(ChunkSize);
+  buf := GetMemory(ChunkSize);
 
   { Initialize CRC }
   Result := $FFFFFFFF;
@@ -4127,24 +4110,24 @@ begin
   { Calculate number of full chunks that will fit into the buffer }
   Num := EndPos div ChunkSize;
   { Calculate remaining bytes }
-  Rest := EndPos mod ChunkSize;
+  rest := EndPos mod ChunkSize;
 
   { Set the stream to the beginning of the file }
   Stream.Position := StartPos;
 
   { Process full chunks }
   for j := 0 to Num - 1 do begin
-      Stream.Read(Buf^, ChunkSize);
-      CRC32BUpdate(Result, Buf, ChunkSize);
+      Stream.Read(buf^, ChunkSize);
+      CRC32BUpdate(Result, buf, ChunkSize);
     end;
 
   { Process remaining bytes }
-  if Rest > 0 then begin
-      Stream.Read(Buf^, Rest);
-      CRC32BUpdate(Result, Buf, Rest);
+  if rest > 0 then begin
+      Stream.Read(buf^, rest);
+      CRC32BUpdate(Result, buf, rest);
     end;
 
-  FreeMem(Buf, ChunkSize);
+  FreeMem(buf, ChunkSize);
 
   Result := Result xor $FFFFFFFF;
 end;
@@ -4165,7 +4148,7 @@ type
   TArrayOf56Bytes = array [1 .. 56] of Byte;
   TArrayOf64Bytes = array [1 .. 64] of Byte;
 
-  TDesData = record
+  TDesData = packed record
     InputValue: TArrayOf64Bytes;
     OutputValue: TArrayOf64Bytes;
     RoundKeys: array [1 .. 16] of TArrayOf48Bytes;
@@ -4277,7 +4260,7 @@ const
     (7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8),
     (2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11)));
 
-  function GetBit(const Bits: TDESKey; const Index: Byte): Byte; inline;
+  function GetBit(const Bits: TDESKey; const Index: Byte): Byte; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
     idx: Byte;
   begin
@@ -4288,7 +4271,7 @@ const
         Result := 0;
   end;
 
-  procedure SetBit(var Bits: TDESKey; Index, Value: Byte); inline;
+  procedure SetBit(var Bits: TDESKey; Index, Value: Byte); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
     Bit: Byte;
   begin
@@ -4300,7 +4283,7 @@ const
     end;
   end;
 
-  procedure f(var FR: TArrayOf32Bytes; var FK: TArrayOf48Bytes; var TotalOut: TArrayOf32Bytes); inline;
+  procedure f(var FR: TArrayOf32Bytes; var FK: TArrayOf48Bytes; var TotalOut: TArrayOf32Bytes); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
     Temp1                  : TArrayOf48Bytes;
     Temp2                  : TArrayOf32Bytes;
@@ -4329,19 +4312,19 @@ const
         TotalOut[n] := Temp2[p[n]];
   end;
 
-  procedure Shift(var SubKeyPart: TArrayOf28Bytes); inline;
+  procedure Shift(var SubKeyPart: TArrayOf28Bytes); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
-    n, B: Byte;
+    n, b: Byte;
   begin
-    B := SubKeyPart[1];
+    b := SubKeyPart[1];
     for n := 1 to 27 do
         SubKeyPart[n] := SubKeyPart[n + 1];
-    SubKeyPart[28] := B;
+    SubKeyPart[28] := b;
   end;
 
-  procedure SubKey(var DesData: TDesData; Round: Byte; var SubKey: TArrayOf48Bytes); inline;
+  procedure SubKey(var DesData: TDesData; Round: Byte; var SubKey: TArrayOf48Bytes); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
-    n, B: Byte;
+    n, b: Byte;
   begin
     for n := 1 to ST[Round] do
       begin
@@ -4350,16 +4333,16 @@ const
       end;
     for n := 1 to 48 do
       begin
-        B := PC_2[n];
-        if B <= 28 then
-            SubKey[n] := DesData.c[B]
+        b := PC_2[n];
+        if b <= 28 then
+            SubKey[n] := DesData.c[b]
         else
-            SubKey[n] := DesData.d[B - 28];
+            SubKey[n] := DesData.d[b - 28];
       end;
   end;
 
 var
-  n, B, Round: Byte;
+  n, b, Round: Byte;
   DesData    : TDesData;
 begin
   for n := 1 to 64 do
@@ -4391,11 +4374,11 @@ begin
     end;
   for n := 1 to 64 do
     begin
-      B := InvIP[n];
-      if B <= 32 then
-          DesData.OutputValue[n] := DesData.r[B]
+      b := InvIP[n];
+      if b <= 32 then
+          DesData.OutputValue[n] := DesData.r[b]
       else
-          DesData.OutputValue[n] := DesData.l[B - 32];
+          DesData.OutputValue[n] := DesData.l[b - 32];
     end;
   for n := 1 to 64 do
       SetBit(Output, n, DesData.OutputValue[n]);
@@ -4505,16 +4488,16 @@ procedure umlFastSymbol(DataPtr: Pointer; Size: Cardinal; const Key: TDESKey; En
 var
   p: NativeUInt;
   i: Integer;
-  B: PBYTE;
+  b: PBYTE;
 begin
   i := 0;
   for p := 0 to Size - 1 do
     begin
-      B := Pointer(NativeUInt(DataPtr) + p);
+      b := Pointer(NativeUInt(DataPtr) + p);
       if Encrypt then
-          B^ := B^ + Key[i]
+          b^ := b^ + Key[i]
       else
-          B^ := B^ - Key[i];
+          b^ := b^ - Key[i];
 
       Inc(i);
       if i >= umlDESLength then
@@ -4532,36 +4515,38 @@ end;
 
 function umlTrimSpace(S: umlString): umlString;
 var
-  i, l: Integer;
+  l, bp, ep: Integer;
 begin
   Result := '';
   l := S.len;
   if l > 0 then
     begin
-      i := 1;
-      while CharIn(S[i], #32#0) do
+      bp := 1;
+      while CharIn(S[bp], [#32, #0]) do
         begin
-          Inc(i);
-          if (i > l) then
+          Inc(bp);
+          if (bp > l) then
             begin
               Result := '';
               Exit;
             end;
         end;
-      if i > l then
+      if bp > l then
           Result := ''
       else
         begin
-          while CharIn(S[i], #32#0) do
+          ep := l;
+
+          while CharIn(S[ep], [#32, #0]) do
             begin
-              Dec(l);
-              if not(l > 0) then
+              Dec(ep);
+              if (ep < 1) then
                 begin
                   Result := '';
                   Exit;
                 end;
             end;
-          Result := S.Copy(i, l - i + 1);
+          Result := S.GetString(bp, ep + 1);
         end;
     end;
 end;
@@ -4575,7 +4560,7 @@ begin
     begin
       ANewText := AText;
       ASeparatorText := umlGetFirstStr(ANewText, SeparatorChar);
-      while (umlGetLength(ASeparatorText) > 0) and (umlGetLength(ANewText) > 0) do
+      while (ASeparatorText.len > 0) and (ANewText.len > 0) do
         begin
           Dest.Add(ASeparatorText.Text);
           Inc(Result);
@@ -4605,23 +4590,23 @@ begin
     end;
 end;
 
-function umlStringsInExists(Dest: TCoreClassStrings; _Text: umlString; IgnoreCase: Boolean = True): Boolean;
+function umlStringsInExists(Dest: TCoreClassStrings; SText: umlString; IgnoreCase: Boolean = True): Boolean;
 var
   i  : Integer;
   _NS: umlString;
 begin
   Result := False;
   if IgnoreCase then
-      _NS := umlUpperCase(_Text)
+      _NS := umlUpperCase(SText)
   else
-      _NS := _Text;
+      _NS := SText;
   if Assigned(Dest) then
     begin
       if Dest.Count > 0 then
         begin
           for i := 0 to Dest.Count - 1 do
             begin
-              if ((not IgnoreCase) and (_Text = Dest[i])) or ((IgnoreCase) and (umlSameText(_Text, Dest[i]))) then
+              if ((not IgnoreCase) and (SText = Dest[i])) or ((IgnoreCase) and (umlSameText(SText, Dest[i]))) then
                 begin
                   Result := True;
                   Exit;
@@ -4631,9 +4616,9 @@ begin
     end;
 end;
 
-function umlTextInStrings(_Text: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Boolean;
+function umlTextInStrings(SText: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Boolean;
 begin
-  Result := umlStringsInExists(Dest, _Text, IgnoreCase);
+  Result := umlStringsInExists(Dest, SText, IgnoreCase);
 end;
 
 function umlAddNewStrTo(SourceStr: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Boolean;
@@ -4643,7 +4628,7 @@ begin
       Dest.Append(SourceStr.Text);
 end;
 
-function umlDeleteStrings(_Text: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
+function umlDeleteStrings(SText: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
 var
   i: Integer;
 begin
@@ -4655,7 +4640,7 @@ begin
           i := 0;
           while i < Dest.Count do
             begin
-              if ((not IgnoreCase) and (_Text = Dest[i])) or ((IgnoreCase) and (umlMultipleMatch(IgnoreCase, _Text, Dest[i]))) then
+              if ((not IgnoreCase) and (SText = Dest[i])) or ((IgnoreCase) and (umlMultipleMatch(IgnoreCase, SText, Dest[i]))) then
                 begin
                   Dest.Delete(i);
                   Inc(Result);
@@ -4667,7 +4652,7 @@ begin
     end;
 end;
 
-function umlDeleteStringsNot(_Text: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
+function umlDeleteStringsNot(SText: umlString; Dest: TCoreClassStrings; IgnoreCase: Boolean = True): Integer;
 var
   i: Integer;
 begin
@@ -4679,7 +4664,7 @@ begin
           i := 0;
           while i < Dest.Count do
             begin
-              if ((not IgnoreCase) and (_Text <> Dest[i])) or ((IgnoreCase) and (not umlMultipleMatch(IgnoreCase, _Text, Dest[i]))) then
+              if ((not IgnoreCase) and (SText <> Dest[i])) or ((IgnoreCase) and (not umlMultipleMatch(IgnoreCase, SText, Dest[i]))) then
                 begin
                   Dest.Delete(i);
                   Inc(Result);
@@ -4720,147 +4705,147 @@ begin
     end;
 end;
 
-function umlLimitTextMatch(_Text, _Limit, _MatchText: umlString; _IgnoreCase: Boolean): Boolean;
+function umlLimitTextMatch(SText, limit, _MatchText: umlString; _IgnoreCase: Boolean): Boolean;
 var
-  _N, _T: umlString;
+  n, t: umlString;
 begin
   Result := True;
   if _MatchText = '' then
       Exit;
-  _N := _Text;
+  n := SText;
   //
-  if umlExistsLimitChar(_N, _Limit) then
+  if umlExistsLimitChar(n, limit) then
     begin
       repeat
-        _T := umlGetFirstStr(_N, _Limit);
-        if umlMultipleMatch(_IgnoreCase, _MatchText, _T) then
+        t := umlGetFirstStr(n, limit);
+        if umlMultipleMatch(_IgnoreCase, _MatchText, t) then
             Exit;
-        _N := umlDeleteFirstStr(_N, _Limit);
-      until _N = '';
+        n := umlDeleteFirstStr(n, limit);
+      until n = '';
     end
   else
     begin
-      _T := _N;
-      if umlMultipleMatch(_IgnoreCase, _MatchText, _T) then
+      t := n;
+      if umlMultipleMatch(_IgnoreCase, _MatchText, t) then
           Exit;
     end;
   //
   Result := False;
 end;
 
-function umlLimitTextTrimSpaceMatch(_Text, _Limit, _MatchText: umlString; _IgnoreCase: Boolean): Boolean;
+function umlLimitTextTrimSpaceMatch(SText, limit, _MatchText: umlString; _IgnoreCase: Boolean): Boolean;
 var
-  _N, _T: umlString;
+  n, t: umlString;
 begin
   Result := True;
   if _MatchText = '' then
       Exit;
-  _N := _Text;
-  //
-  if umlExistsLimitChar(_N, _Limit) then
+  n := SText;
+
+  if umlExistsLimitChar(n, limit) then
     begin
       repeat
-        _T := umlTrimSpace(umlGetFirstStr(_N, _Limit));
-        if umlMultipleMatch(_IgnoreCase, _MatchText, _T) then
+        t := umlTrimSpace(umlGetFirstStr(n, limit));
+        if umlMultipleMatch(_IgnoreCase, _MatchText, t) then
             Exit;
-        _N := umlDeleteFirstStr(_N, _Limit);
-      until _N = '';
+        n := umlDeleteFirstStr(n, limit);
+      until n = '';
     end
   else
     begin
-      _T := umlTrimSpace(_N);
-      if umlMultipleMatch(_IgnoreCase, _MatchText, _T) then
+      t := umlTrimSpace(n);
+      if umlMultipleMatch(_IgnoreCase, _MatchText, t) then
           Exit;
     end;
-  //
+
   Result := False;
 end;
 
-function umlLimitDeleteText(_Text, _Limit, _MatchText: umlString; _IgnoreCase: Boolean): umlString;
+function umlLimitDeleteText(SText, limit, _MatchText: umlString; _IgnoreCase: Boolean): umlString;
 var
-  _N, _T: umlString;
+  n, t: umlString;
 begin
-  if (_MatchText = '') or (_Limit = '') then
+  if (_MatchText = '') or (limit = '') then
     begin
-      Result := _Text;
+      Result := SText;
       Exit;
     end;
   Result := '';
-  _N := _Text;
+  n := SText;
   //
-  if umlExistsLimitChar(_N, _Limit) then
+  if umlExistsLimitChar(n, limit) then
     begin
       repeat
-        _T := umlGetFirstStr(_N, _Limit);
-        if not umlMultipleMatch(_IgnoreCase, _MatchText, _T) then
+        t := umlGetFirstStr(n, limit);
+        if not umlMultipleMatch(_IgnoreCase, _MatchText, t) then
           begin
             if Result <> '' then
-                Result := Result + _Limit[1] + _T
+                Result := Result + limit[1] + t
             else
-                Result := _T;
+                Result := t;
           end;
-        _N := umlDeleteFirstStr(_N, _Limit);
-      until _N = '';
+        n := umlDeleteFirstStr(n, limit);
+      until n = '';
     end
   else
     begin
-      _T := _N;
-      if not umlMultipleMatch(_IgnoreCase, _MatchText, _T) then
-          Result := _Text;
+      t := n;
+      if not umlMultipleMatch(_IgnoreCase, _MatchText, t) then
+          Result := SText;
     end;
 end;
 
-function umlLimitTextAsList(_Text, _Limit: umlString; _AsList: TCoreClassStrings): Boolean;
+function umlLimitTextAsList(SText, limit: umlString; AsLst: TCoreClassStrings): Boolean;
 var
-  _N, _T: umlString;
+  n, t: umlString;
 begin
-  _AsList.Clear;
-  _N := _Text;
+  AsLst.Clear;
+  n := SText;
   //
-  if umlExistsLimitChar(_N, _Limit) then
+  if umlExistsLimitChar(n, limit) then
     begin
       repeat
-        _T := umlGetFirstStr(_N, _Limit);
-        _AsList.Append(_T.Text);
-        _N := umlDeleteFirstStr(_N, _Limit);
-      until _N = '';
+        t := umlGetFirstStr(n, limit);
+        AsLst.Append(t.Text);
+        n := umlDeleteFirstStr(n, limit);
+      until n = '';
     end
   else
     begin
-      _T := _N;
-      if umlGetLength(_T) > 0 then
-          _AsList.Append(_T.Text);
+      t := n;
+      if umlGetLength(t) > 0 then
+          AsLst.Append(t.Text);
     end;
   //
-  Result := _AsList.Count > 0;
+  Result := AsLst.Count > 0;
 end;
 
-function umlLimitTextAsListAndTrimSpace(_Text, _Limit: umlString; _AsList: TCoreClassStrings): Boolean;
+function umlLimitTextAsListAndTrimSpace(SText, limit: umlString; AsLst: TCoreClassStrings): Boolean;
 var
-  _N, _T: umlString;
+  n, t: umlString;
 begin
-  _AsList.Clear;
-  _N := _Text;
+  AsLst.Clear;
+  n := SText;
   //
-  if umlExistsLimitChar(_N, _Limit) then
+  if umlExistsLimitChar(n, limit) then
     begin
       repeat
-        _T := umlGetFirstStr(_N, _Limit);
-        _AsList.Append(umlTrimSpace(_T).Text);
-        _N := umlDeleteFirstStr(_N, _Limit);
-      until _N = '';
+        t := umlGetFirstStr(n, limit);
+        AsLst.Append(umlTrimSpace(t).Text);
+        n := umlDeleteFirstStr(n, limit);
+      until n = '';
     end
   else
     begin
-      _T := _N;
-      if umlGetLength(_T) > 0 then
-          _AsList.Append(umlTrimSpace(_T).Text);
+      t := n;
+      if umlGetLength(t) > 0 then
+          AsLst.Append(umlTrimSpace(t).Text);
     end;
   //
-  Result := _AsList.Count > 0;
+  Result := AsLst.Count > 0;
 end;
 
-function umlListAsLimitText(_List: TCoreClassStrings; _Limit: umlString): umlString;
+function umlListAsLimitText(_List: TCoreClassStrings; limit: umlString): umlString;
 var
   i: Integer;
 begin
@@ -4869,7 +4854,7 @@ begin
     if Result = '' then
         Result := _List[i]
     else
-        Result := Result + _Limit + _List[i];
+        Result := Result + limit + _List[i];
 end;
 
 function umlUpdateComponentName(Name: umlString): umlString;
@@ -4945,33 +4930,33 @@ begin
 end;
 
 function umlProcessCycleValue(CurrentVal, DeltaVal, StartVal, OverVal: Single; var EndFlag: Boolean): Single;
-  function IfOut(Cur, Delta, Dest: Single): Boolean; inline;
+  function IfOut(Cur, delta, Dest: Single): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   begin
     if Cur > Dest then
-        Result := Cur - Delta < Dest
+        Result := Cur - delta < Dest
     else
-        Result := Cur + Delta > Dest;
+        Result := Cur + delta > Dest;
   end;
 
-  function GetOutValue(Cur, Delta, Dest: Single): Single; inline;
+  function GetOutValue(Cur, delta, Dest: Single): Single; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   begin
-    if IfOut(Cur, Delta, Dest) then
+    if IfOut(Cur, delta, Dest) then
       begin
         if Cur > Dest then
-            Result := Dest - (Cur - Delta)
+            Result := Dest - (Cur - delta)
         else
-            Result := Cur + Delta - Dest;
+            Result := Cur + delta - Dest;
       end
     else
         Result := 0;
   end;
 
-  function GetDeltaValue(Cur, Delta, Dest: Single): Single; inline;
+  function GetDeltaValue(Cur, delta, Dest: Single): Single; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   begin
     if Cur > Dest then
-        Result := Cur - Delta
+        Result := Cur - delta
     else
-        Result := Cur + Delta;
+        Result := Cur + delta;
   end;
 
 begin
@@ -5001,5 +4986,9 @@ begin
   else
       Result := CurrentVal;
 end;
+
+initialization
+
+finalization
 
 end.

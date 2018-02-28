@@ -1,5 +1,5 @@
 unit FMXCliFrm;
-
+
 interface
 
 uses
@@ -52,18 +52,35 @@ end;
 
 procedure TFMXClientForm.connectButtonClick(Sender: TObject);
 begin
-  client.Connect(HostEdit.Text, 9818);
+  // 方法1，阻塞式链接
+  // client.Connect(HostEdit.Text, 9818);
+
+  // 方法2，异步高速链接
+  client.AsyncConnect(HostEdit.Text, 9818, procedure(const cState: Boolean)
+    begin
+      if cState then
+          DoStatus('链接成功')
+      else
+          DoStatus('链接失败');
+    end);
 end;
 
 procedure TFMXClientForm.DoStatusNear(AText: string; const ID: Integer);
 begin
   Memo1.Lines.Add(AText);
+  Memo1.GoToTextEnd;
+end;
+
+procedure fmx_Indy_ProgressBackgroundProc;
+begin
+  Application.ProcessMessages;
 end;
 
 procedure TFMXClientForm.FormCreate(Sender: TObject);
 begin
   AddDoStatusHook(self, DoStatusNear);
   client := TCommunicationFramework_Client_Indy.Create;
+  ProgressBackgroundProc := fmx_Indy_ProgressBackgroundProc;
 end;
 
 procedure TFMXClientForm.FormDestroy(Sender: TObject);
@@ -119,11 +136,11 @@ var
   p : PInt64;
   i : Integer;
 begin
-  // 在ms中包含了128M大型数据，在服务器端相当于执行了1条普通命令
+  // 在ms中包含了16M大型数据，在服务器端相当于执行了1条普通命令
   ms := TMemoryStream.Create;
-  ms.SetSize(128 * 1024 * 1024);
+  ms.Size := 16 * 1024 * 1024;
 
-  DoStatus('创建128M临时大数据流');
+  DoStatus('创建16M临时大数据流');
   p := ms.Memory;
   for i := 1 to ms.Size div SizeOf(Int64) do
     begin
@@ -147,7 +164,7 @@ var
 begin
   // 在SendDE中包含了512k大型数据，在服务器端相当于执行了512条普通命令
   ms := TMemoryStream.Create;
-  ms.SetSize(512 * 1024);
+  ms.Size := 512 * 1024;
 
   p := ms.Memory;
   for i := 1 to ms.Size div SizeOf(Int64) do
@@ -171,3 +188,4 @@ begin
 end;
 
 end.
+
